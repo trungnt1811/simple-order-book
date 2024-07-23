@@ -7,35 +7,74 @@ import (
 	"github.com/trungnt1811/simple-order-book/internal/model"
 )
 
+type ExpectedOrder struct {
+	CustomerID int
+	Price      int
+}
+
 // TestOrderHeap tests the OrderHeap implementation.
 func TestOrderHeap(t *testing.T) {
 	testCases := []struct {
-		name          string
-		desc          bool
-		orders        []*model.Order
-		expectedOrder []int
+		name           string
+		desc           bool
+		orders         []*model.Order
+		expectedOrders []ExpectedOrder
 	}{
 		{
 			name: "Ascending order test (sell orders)",
 			desc: false,
 			orders: []*model.Order{
-				{Price: 100},
-				{Price: 99},
-				{Price: 101},
-				{Price: 98},
+				{CustomerID: 1, Price: 100},
+				{CustomerID: 2, Price: 99},
+				{CustomerID: 3, Price: 101},
+				{CustomerID: 4, Price: 98},
 			},
-			expectedOrder: []int{98, 99, 100, 101},
+			expectedOrders: []ExpectedOrder{
+				{
+					CustomerID: 4,
+					Price:      98,
+				},
+				{
+					CustomerID: 2,
+					Price:      99,
+				},
+				{
+					CustomerID: 1,
+					Price:      100,
+				},
+				{
+					CustomerID: 3,
+					Price:      101,
+				},
+			},
 		},
 		{
 			name: "Descending order test (buy orders)",
 			desc: true,
 			orders: []*model.Order{
-				{Price: 100},
-				{Price: 99},
-				{Price: 101},
-				{Price: 98},
+				{CustomerID: 1, Price: 100},
+				{CustomerID: 2, Price: 99},
+				{CustomerID: 3, Price: 101},
+				{CustomerID: 4, Price: 98},
 			},
-			expectedOrder: []int{101, 100, 99, 98},
+			expectedOrders: []ExpectedOrder{
+				{
+					CustomerID: 3,
+					Price:      101,
+				},
+				{
+					CustomerID: 1,
+					Price:      100,
+				},
+				{
+					CustomerID: 2,
+					Price:      99,
+				},
+				{
+					CustomerID: 4,
+					Price:      98,
+				},
+			},
 		},
 	}
 
@@ -46,14 +85,23 @@ func TestOrderHeap(t *testing.T) {
 				heap.Push(orderHeap, order)
 			}
 
-			for i, expectedPrice := range tc.expectedOrder {
+			for i, expectedOrder := range tc.expectedOrders {
 				order := heap.Pop(orderHeap).(*model.Order)
-				if order.Price != expectedPrice {
+				if order.CustomerID != expectedOrder.CustomerID {
+					t.Errorf(
+						"Test case failed: %s. Order %d: expected customer ID %d, got %d",
+						tc.name,
+						i+1,
+						expectedOrder.CustomerID,
+						order.CustomerID,
+					)
+				}
+				if order.Price != expectedOrder.Price {
 					t.Errorf(
 						"Test case failed: %s. Order %d: expected price %d, got %d",
 						tc.name,
 						i+1,
-						expectedPrice,
+						expectedOrder.Price,
 						order.Price,
 					)
 				}
