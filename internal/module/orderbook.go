@@ -1,0 +1,155 @@
+package module
+
+import (
+	"container/heap"
+	"fmt"
+	"sync"
+	"time"
+
+	"github.com/trungnt1811/simple-order-book/internal/model"
+)
+
+// OrderBook manages buy and sell orders.
+type OrderBook struct {
+	BuyOrders      *model.OrderHeap
+	SellOrders     *model.OrderHeap
+	Orders         map[int]*model.Order   // All orders by ID
+	CustomerOrders map[int][]*model.Order // Orders by customer ID
+	NextOrderID    int
+	mu             sync.Mutex
+}
+
+// NewOrderBook creates a new OrderBook.
+func NewOrderBook() *OrderBook {
+	return &OrderBook{
+		BuyOrders:      &model.OrderHeap{Desc: true},
+		SellOrders:     &model.OrderHeap{Desc: false},
+		Orders:         make(map[int]*model.Order),
+		CustomerOrders: make(map[int][]*model.Order),
+		NextOrderID:    1,
+	}
+}
+
+// SubmitOrder submits a new buy or sell order.
+func (ob *OrderBook) SubmitOrder(customerID int, price int, isBuy bool, gtt *time.Time) {
+	ob.mu.Lock()
+	defer ob.mu.Unlock()
+
+	// Create a new order
+	order := &model.Order{
+		ID:         ob.NextOrderID,
+		CustomerID: customerID,
+		Price:      price,
+		Timestamp:  time.Now(),
+		GTT:        gtt,
+	}
+
+	ob.NextOrderID++
+
+	// Try to match the order
+	if isBuy {
+		ob.matchBuyOrder(order)
+	} else {
+		ob.matchSellOrder(order)
+	}
+}
+
+// CancelOrder cancels an existing order by ID.
+func (ob *OrderBook) CancelOrder(orderID int) {
+	ob.mu.Lock()
+	defer ob.mu.Unlock()
+
+	order, exists := ob.Orders[orderID]
+	if !exists {
+		fmt.Println("Order not found")
+		return
+	}
+
+	// Remove order from the order book
+	delete(ob.Orders, orderID)
+
+	// Remove order from customer's list of orders
+	for i, o := range ob.CustomerOrders[order.CustomerID] {
+		if o.ID == orderID {
+			ob.CustomerOrders[order.CustomerID] = append(
+				ob.CustomerOrders[order.CustomerID][:i],
+				ob.CustomerOrders[order.CustomerID][i+1:]...,
+			)
+			break
+		}
+	}
+
+	fmt.Printf("Order %d cancelled\n", orderID)
+}
+
+// QueryOrders returns all active orders for a given customer ID.
+func (ob *OrderBook) QueryOrders(customerID int) []*model.Order {
+	ob.mu.Lock()
+	defer ob.mu.Unlock()
+
+	orders := ob.CustomerOrders[customerID]
+	activeOrders := []*model.Order{}
+	now := time.Now()
+
+	for _, order := range orders {
+		if order.GTT == nil || order.GTT.After(now) {
+			activeOrders = append(activeOrders, order)
+		}
+	}
+
+	return activeOrders
+}
+
+func (ob *OrderBook) matchBuyOrder(order *model.Order) {
+	// Match buy order with the lowest sell offer
+	for ob.SellOrders.Len() > 0 {
+		sellOrder := heap.Pop(ob.SellOrders).(*model.Order)
+		if sellOrder.CustomerID == order.CustomerID {
+			heap.Push(ob.SellOrders, sellOrder)
+			continue
+		}
+
+		// If the sell price is less than or equal to the buy price, execute the trade
+		if sellOrder.Price <= order.Price {
+			fmt.Printf("Matched Buy Order %d with Sell Order %d at price %d\n", order.ID, sellOrder.ID, sellOrder.Price)
+			delete(ob.Orders, sellOrder.ID)
+			return
+		}
+
+		// Put the order back and break if no match
+		heap.Push(ob.SellOrders, sellOrder)
+		break
+	}
+
+	// No match found, add to the buy orders
+	heap.Push(ob.BuyOrders, order)
+	ob.Orders[order.ID] = order
+	ob.CustomerOrders[order.CustomerID] = append(ob.CustomerOrders[order.CustomerID], order)
+}
+
+func (ob *OrderBook) matchSellOrder(order *model.Order) {
+	// Match sell order with the highest buy offer
+	for ob.BuyOrders.Len() > 0 {
+		buyOrder := heap.Pop(ob.BuyOrders).(*model.Order)
+		if buyOrder.CustomerID == order.CustomerID {
+			heap.Push(ob.BuyOrders, buyOrder)
+			continue
+		}
+
+		// If the buy price is greater than or equal to the sell price, execute the trade
+		if buyOrder.Price >= order.Price {
+			fmt.Printf("Matched Sell Order %d with Buy Order %d at price %d\n", order.ID, buyOrder.ID, buyOrder.Price)
+			delete(ob.Orders, buyOrder.ID)
+			return
+		}
+
+		// Put the order back and break if no match
+		heap.Push(ob.BuyOrders, buyOrder)
+		break
+	}
+
+	// No match found, add to the sell orders
+	heap.Push(ob.SellOrders, order)
+	ob.Orders[order.ID] = order
+	ob.CustomerOrders[order.CustomerID] = append(ob.CustomerOrders[order.CustomerID], order)
+}

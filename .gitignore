@@ -1,0 +1,14 @@
+# OS
+.DS_Store
+
+# IDE
+.vscode/*
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+*.code-workspace
+.idea/*
+
+# Order Book
+orderbookd
