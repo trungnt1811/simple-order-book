@@ -56,48 +56,51 @@ func (ob *OrderBook) SubmitOrder(customerID int, price int, isBuy bool, gtt *tim
 
 // CancelOrder cancels an existing order by ID.
 func (ob *OrderBook) CancelOrder(orderID int) {
-	ob.mu.Lock()
-	defer ob.mu.Unlock()
+	ob.mu.Lock()         // Lock the order book for safe concurrent access
+	defer ob.mu.Unlock() // Ensure the lock is released when the function returns
 
+	// Check if the order exists in the order book
 	order, exists := ob.Orders[orderID]
 	if !exists {
-		fmt.Println("Order not found")
+		fmt.Println("Order not found") // Inform the user if the order is not found
 		return
 	}
 
-	// Remove order from the order book
+	// Remove the order from the main order book
 	delete(ob.Orders, orderID)
 
-	// Remove order from customer's list of orders
-	for i, o := range ob.CustomerOrders[order.CustomerID] {
+	// Remove the order from the customer's list of orders
+	customerOrders := ob.CustomerOrders[order.CustomerID]
+	for i, o := range customerOrders {
 		if o.ID == orderID {
-			ob.CustomerOrders[order.CustomerID] = append(
-				ob.CustomerOrders[order.CustomerID][:i],
-				ob.CustomerOrders[order.CustomerID][i+1:]...,
-			)
+			// Remove the order from the slice of the customer's orders
+			ob.CustomerOrders[order.CustomerID] = append(customerOrders[:i], customerOrders[i+1:]...)
 			break
 		}
 	}
 
-	fmt.Printf("Order %d cancelled\n", orderID)
+	fmt.Printf("Order %d cancelled\n", orderID) // Confirm the cancellation
 }
 
 // QueryOrders returns all active orders for a given customer ID.
 func (ob *OrderBook) QueryOrders(customerID int) []*model.Order {
-	ob.mu.Lock()
-	defer ob.mu.Unlock()
+	ob.mu.Lock()         // Lock the order book to prevent concurrent modifications
+	defer ob.mu.Unlock() // Ensure the lock is released after the function completes
 
-	orders := ob.CustomerOrders[customerID]
+	// Retrieve the orders for the given customer ID
+	customerOrders := ob.CustomerOrders[customerID]
 	activeOrders := []*model.Order{}
-	now := time.Now()
+	currentTime := time.Now()
 
-	for _, order := range orders {
-		if order.GTT == nil || order.GTT.After(now) {
+	// Filter and collect only the active orders
+	for _, order := range customerOrders {
+		// Check if the order is still active based on its GTT (Good Til Time)
+		if order.GTT == nil || order.GTT.After(currentTime) {
 			activeOrders = append(activeOrders, order)
 		}
 	}
 
-	return activeOrders
+	return activeOrders // Return the list of active orders for the customer
 }
 
 func (ob *OrderBook) matchBuyOrder(order *model.Order) {
