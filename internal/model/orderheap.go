@@ -31,9 +31,8 @@ func (h *OrderHeap) Push(x interface{}) {
 
 // Pop removes and returns the highest priority order from the heap.
 func (h *OrderHeap) Pop() interface{} {
-	old := h.Orders
-	n := len(old)
-	order := old[n-1]
-	h.Orders = old[0 : n-1]
+	n := len(h.Orders)
+	order := h.Orders[n-1]       // Retrieves the last element of the slice, which is the order to be removed
+	h.Orders = h.Orders[0 : n-1] // Removing the last element
 	return order
 }

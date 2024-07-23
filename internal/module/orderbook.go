@@ -101,54 +101,62 @@ func (ob *OrderBook) QueryOrders(customerID int) []*model.Order {
 }
 
 func (ob *OrderBook) matchBuyOrder(order *model.Order) {
-	// Match buy order with the lowest sell offer
+	// Attempt to match the buy order with existing sell orders
 	for ob.SellOrders.Len() > 0 {
+		// Retrieve the lowest sell order
 		sellOrder := heap.Pop(ob.SellOrders).(*model.Order)
+
+		// Skip if the sell order belongs to the same customer
 		if sellOrder.CustomerID == order.CustomerID {
-			heap.Push(ob.SellOrders, sellOrder)
+			heap.Push(ob.SellOrders, sellOrder) // Push it back to the heap
 			continue
 		}
 
-		// If the sell price is less than or equal to the buy price, execute the trade
+		// Check if the buy price can match the sell price
 		if sellOrder.Price <= order.Price {
+			// A match is found, execute the trade
 			fmt.Printf("Matched Buy Order %d with Sell Order %d at price %d\n", order.ID, sellOrder.ID, sellOrder.Price)
-			delete(ob.Orders, sellOrder.ID)
-			return
+			delete(ob.Orders, sellOrder.ID) // Remove the matched sell order
+			return                          // Exit after successful match
 		}
 
-		// Put the order back and break if no match
+		// No match found, push the sell order back and exit loop
 		heap.Push(ob.SellOrders, sellOrder)
 		break
 	}
 
-	// No match found, add to the buy orders
+	// No match found, add the buy order to the list of active buy orders
 	heap.Push(ob.BuyOrders, order)
 	ob.Orders[order.ID] = order
 	ob.CustomerOrders[order.CustomerID] = append(ob.CustomerOrders[order.CustomerID], order)
 }
 
 func (ob *OrderBook) matchSellOrder(order *model.Order) {
-	// Match sell order with the highest buy offer
+	// Attempt to match the sell order with existing buy orders
 	for ob.BuyOrders.Len() > 0 {
+		// Retrieve the highest buy order
 		buyOrder := heap.Pop(ob.BuyOrders).(*model.Order)
+
+		// Skip if the buy order belongs to the same customer
 		if buyOrder.CustomerID == order.CustomerID {
-			heap.Push(ob.BuyOrders, buyOrder)
+			heap.Push(ob.BuyOrders, buyOrder) // Push it back to the heap
 			continue
 		}
 
-		// If the buy price is greater than or equal to the sell price, execute the trade
+		// Check if the sell price can match the buy price
 		if buyOrder.Price >= order.Price {
+			// A match is found; execute the trade
 			fmt.Printf("Matched Sell Order %d with Buy Order %d at price %d\n", order.ID, buyOrder.ID, buyOrder.Price)
-			delete(ob.Orders, buyOrder.ID)
-			return
+			delete(ob.Orders, buyOrder.ID) // Remove the matched buy order
+			return                         // Exit after successful match
 		}
 
-		// Put the order back and break if no match
+		// No match found; push the buy order back and exit loop
 		heap.Push(ob.BuyOrders, buyOrder)
 		break
 	}
 
-	// No match found, add to the sell orders
+	// No match found; add the sell order to the list of active sell orders
 	heap.Push(ob.SellOrders, order)
 	ob.Orders[order.ID] = order
 	ob.CustomerOrders[order.CustomerID] = append(ob.CustomerOrders[order.CustomerID], order)

@@ -7,17 +7,14 @@ import (
 	"github.com/trungnt1811/simple-order-book/internal/model"
 )
 
-// Test case structure
-type orderHeapTestCase struct {
-	name          string
-	desc          bool
-	orders        []*model.Order
-	expectedOrder []int
-}
-
 // TestOrderHeap tests the OrderHeap implementation.
 func TestOrderHeap(t *testing.T) {
-	testCases := []orderHeapTestCase{
+	testCases := []struct {
+		name          string
+		desc          bool
+		orders        []*model.Order
+		expectedOrder []int
+	}{
 		{
 			name: "Ascending order test (sell orders)",
 			desc: false,
@@ -44,18 +41,18 @@ func TestOrderHeap(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			h := &model.OrderHeap{Desc: tc.desc}
+			orderHeap := &model.OrderHeap{Desc: tc.desc}
 			for _, order := range tc.orders {
-				heap.Push(h, order)
+				heap.Push(orderHeap, order)
 			}
 
-			for j, expectedPrice := range tc.expectedOrder {
-				order := heap.Pop(h).(*model.Order)
+			for i, expectedPrice := range tc.expectedOrder {
+				order := heap.Pop(orderHeap).(*model.Order)
 				if order.Price != expectedPrice {
 					t.Errorf(
 						"Test case failed: %s. Order %d: expected price %d, got %d",
 						tc.name,
-						j+1,
+						i+1,
 						expectedPrice,
 						order.Price,
 					)
