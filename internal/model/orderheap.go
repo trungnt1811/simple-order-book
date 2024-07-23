@@ -25,7 +25,9 @@ func (h OrderHeap) Swap(i, j int) {
 }
 
 // Push adds an order to the heap.
-func (h *OrderHeap) Push(x interface{}) { h.Orders = append(h.Orders, x.(*Order)) }
+func (h *OrderHeap) Push(x interface{}) {
+	h.Orders = append(h.Orders, x.(*Order))
+}
 
 // Pop removes and returns the highest priority order from the heap.
 func (h *OrderHeap) Pop() interface{} {
