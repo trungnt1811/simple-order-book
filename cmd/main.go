@@ -2,13 +2,22 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/trungnt1811/simple-order-book/internal/constant"
+	"github.com/trungnt1811/simple-order-book/internal/logger"
 	"github.com/trungnt1811/simple-order-book/internal/module"
 )
 
 func main() {
-	ob := module.NewOrderBook()
+	// Setup logger
+	logger, err := logger.Setup()
+	if err != nil {
+		log.Fatalf("Failed to initialize zap logger: %v", err)
+	}
+	defer logger.Sync() // Flushes buffer, if any
+
+	ob := module.NewOrderBook(logger)
 
 	// Example usage
 	ob.SubmitOrder(1, 100, constant.BuyOrder, nil)  // Customer 1 offers to buy at $100

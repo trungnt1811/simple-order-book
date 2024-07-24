@@ -3,9 +3,10 @@ package module
 import (
 	"container/heap"
 	"fmt"
-	"log"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/trungnt1811/simple-order-book/internal/constant"
 	"github.com/trungnt1811/simple-order-book/internal/model"
@@ -19,16 +20,18 @@ type OrderBook struct {
 	CustomerOrders map[uint]map[uint64]*model.Order // Orders by customer ID and order ID
 	NextOrderID    uint64
 	mtx            sync.RWMutex
+	logger         *zap.Logger
 }
 
 // NewOrderBook creates a new OrderBook.
-func NewOrderBook() *OrderBook {
+func NewOrderBook(logger *zap.Logger) *OrderBook {
 	return &OrderBook{
 		BuyOrders:      &model.OrderHeap{Type: constant.BuyOrder},
 		SellOrders:     &model.OrderHeap{Type: constant.SellOrder},
 		Orders:         make(map[uint64]*model.Order),
 		CustomerOrders: make(map[uint]map[uint64]*model.Order),
 		NextOrderID:    1,
+		logger:         logger,
 	}
 }
 
@@ -66,7 +69,7 @@ func (ob *OrderBook) CancelOrder(orderID uint64) error {
 	// Check if the order exists in the order book
 	order, exists := ob.Orders[orderID]
 	if !exists {
-		log.Printf("Order not found: %d", orderID)
+		ob.logger.Warn("Order not found", zap.Uint64("orderID", orderID))
 		return fmt.Errorf("order not found: %d", orderID)
 	}
 
@@ -76,7 +79,7 @@ func (ob *OrderBook) CancelOrder(orderID uint64) error {
 	// Remove the order from the CustomerOrders map
 	ob.removeOrderFromCustomerOrders(order.CustomerID, orderID)
 
-	log.Printf("Order %d cancelled", orderID)
+	ob.logger.Info("Order cancelled", zap.Uint64("orderID", orderID))
 	return nil
 }
 
@@ -143,8 +146,11 @@ func (ob *OrderBook) matchOrder(order *model.Order, orderType constant.OrderType
 			if (orderType == constant.BuyOrder && oppositeOrder.Price <= order.Price) ||
 				(orderType == constant.SellOrder && oppositeOrder.Price >= order.Price) {
 				// A match is found, execute the trade
-				log.Printf("Matched Order %d with Order %d at price %d\n",
-					order.ID, oppositeOrder.ID, oppositeOrder.Price)
+				ob.logger.Info("Matched orders",
+					zap.Uint64("orderID", order.ID),
+					zap.Uint64("oppositeOrderID", oppositeOrder.ID),
+					zap.Uint("price", oppositeOrder.Price),
+				)
 
 				// Remove the matched opposite order
 				ob.removeOrder(oppositeOrder)
