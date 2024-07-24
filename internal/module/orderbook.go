@@ -49,11 +49,7 @@ func (ob *OrderBook) SubmitOrder(customerID int, price int, orderType constant.O
 	ob.NextOrderID++
 
 	// Try to match the order
-	if orderType == constant.BuyOrder {
-		ob.matchBuyOrder(order)
-	} else {
-		ob.matchSellOrder(order)
-	}
+	ob.matchOrder(order, orderType)
 }
 
 // CancelOrder cancels an existing order by ID.
@@ -103,148 +99,93 @@ func (ob *OrderBook) QueryOrders(customerID int) []*model.Order {
 	return activeOrders // Return the list of active orders for the customer
 }
 
-func (ob *OrderBook) matchBuyOrder(order *model.Order) {
+// matchOrder attempts to match a new order with existing orders
+func (ob *OrderBook) matchOrder(order *model.Order, orderType constant.OrderType) {
 	currentTime := time.Now()
 
-	// If the buy order's GTT (Good Til Time) is set and it is before the current time, the order is expired.
+	// If the order's GTT (Good Til Time) is set and it is before the current time, the order is expired.
 	// Return immediately as expired orders cannot be matched.
 	if order.GTT != nil && order.GTT.Before(currentTime) {
 		return
 	}
 
+	var targetOrders, oppositeOrders *model.OrderHeap
+	if orderType == constant.BuyOrder {
+		targetOrders = ob.BuyOrders
+		oppositeOrders = ob.SellOrders
+	} else {
+		targetOrders = ob.SellOrders
+		oppositeOrders = ob.BuyOrders
+	}
+
 	skippedOrders := []*model.Order{}
 
-	// Attempt to match the buy order with existing sell orders
-	for ob.SellOrders.Len() > 0 {
-		// Retrieve the lowest sell order
-		sellOrder := heap.Pop(ob.SellOrders).(*model.Order)
+	// Attempt to match the order with existing opposite orders
+	for oppositeOrders.Len() > 0 {
+		// Retrieve the top opposite order
+		oppositeOrder := heap.Pop(oppositeOrders).(*model.Order)
 
-		// Skip if the sell order is not present in the Orders map
-		if _, exists := ob.Orders[sellOrder.ID]; !exists {
+		// Skip if the opposite order is not present in the Orders map
+		if _, exists := ob.Orders[oppositeOrder.ID]; !exists {
 			continue
 		}
 
-		// Skip if the sell order belongs to the same customer
-		if sellOrder.CustomerID == order.CustomerID {
-			skippedOrders = append(skippedOrders, sellOrder) // Temporarily store the order
+		// Skip if the opposite order belongs to the same customer
+		if oppositeOrder.CustomerID == order.CustomerID {
+			skippedOrders = append(skippedOrders, oppositeOrder) // Temporarily store the order
 			continue
 		}
 
-		// Check if the order is still active based on its GTT (Good Til Time)
-		if sellOrder.GTT == nil || sellOrder.GTT.After(currentTime) {
-			// Check if the buy price can match the sell price
-			if sellOrder.Price <= order.Price {
+		// Check if the opposite order is still active based on its GTT (Good Til Time)
+		if oppositeOrder.GTT == nil || oppositeOrder.GTT.After(currentTime) {
+			// Check if the order prices can match
+			if (orderType == constant.BuyOrder && oppositeOrder.Price <= order.Price) ||
+				(orderType == constant.SellOrder && oppositeOrder.Price >= order.Price) {
 				// A match is found, execute the trade
-				log.Printf("Matched Buy Order %d with Sell Order %d at price %d\n", order.ID, sellOrder.ID, sellOrder.Price)
+				log.Printf("Matched Order %d with Order %d at price %d\n",
+					order.ID, oppositeOrder.ID, oppositeOrder.Price)
 
-				// Remove the matched sell order
-				delete(ob.Orders, sellOrder.ID)
-
-				// Remove the matched sell order from the customer's orders
-				ob.removeOrderFromCustomerOrders(sellOrder.CustomerID, sellOrder.ID)
+				// Remove the matched opposite order
+				ob.removeOrder(oppositeOrder)
 
 				// Reinsert any skipped orders before returning
-				for _, skipped := range skippedOrders {
-					heap.Push(ob.SellOrders, skipped)
-				}
+				ob.reinsertSkippedOrders(oppositeOrders, skippedOrders)
 				return // Exit after successful match
 			}
 		} else {
-			delete(ob.Orders, sellOrder.ID)                                      // Remove expired sell orders
-			ob.removeOrderFromCustomerOrders(sellOrder.CustomerID, sellOrder.ID) // Remove the expired sell order from the customer's orders
+			ob.removeOrder(oppositeOrder) // Remove expired opposite orders
 			continue
 		}
 
-		// No match found, push the sell order back and exit loop
-		heap.Push(ob.SellOrders, sellOrder)
+		// No match found, push the opposite order back and exit loop
+		heap.Push(oppositeOrders, oppositeOrder)
 		// Reinsert any skipped orders before exiting the loop
-		for _, skipped := range skippedOrders {
-			heap.Push(ob.SellOrders, skipped)
-		}
+		ob.reinsertSkippedOrders(oppositeOrders, skippedOrders)
 		break
 	}
 
-	// No match found, add the buy order to the list of active buy orders
-	heap.Push(ob.BuyOrders, order)
+	// No match found, add the order to the list of active target orders
+	heap.Push(targetOrders, order)
 	ob.Orders[order.ID] = order
 
-	// Add the buy order to the CustomerOrders map
+	// Add the order to the CustomerOrders map
 	if ob.CustomerOrders[order.CustomerID] == nil {
 		ob.CustomerOrders[order.CustomerID] = make(map[int]*model.Order)
 	}
 	ob.CustomerOrders[order.CustomerID][order.ID] = order
 }
 
-func (ob *OrderBook) matchSellOrder(order *model.Order) {
-	currentTime := time.Now()
+// Helper function to remove an order from the Orders map and CustomerOrders map
+func (ob *OrderBook) removeOrder(order *model.Order) {
+	delete(ob.Orders, order.ID)
+	ob.removeOrderFromCustomerOrders(order.CustomerID, order.ID)
+}
 
-	// If the sell order's GTT (Good Til Time) is set and it is before the current time, the order is expired.
-	// Return immediately as expired orders cannot be matched.
-	if order.GTT != nil && order.GTT.Before(currentTime) {
-		return
+// Helper function to reinsert skipped orders back into the heap
+func (ob *OrderBook) reinsertSkippedOrders(orders *model.OrderHeap, skippedOrders []*model.Order) {
+	for _, skipped := range skippedOrders {
+		heap.Push(orders, skipped)
 	}
-
-	skippedOrders := []*model.Order{}
-
-	// Attempt to match the sell order with existing buy orders
-	for ob.BuyOrders.Len() > 0 {
-		// Retrieve the highest buy order
-		buyOrder := heap.Pop(ob.BuyOrders).(*model.Order)
-
-		// Skip if the buy order is not present in the Orders map
-		if _, exists := ob.Orders[buyOrder.ID]; !exists {
-			continue
-		}
-
-		// Skip if the buy order belongs to the same customer
-		if buyOrder.CustomerID == order.CustomerID {
-			skippedOrders = append(skippedOrders, buyOrder) // Temporarily store the order
-			continue
-		}
-
-		// Check if the order is still active based on its GTT (Good Til Time)
-		if buyOrder.GTT == nil || buyOrder.GTT.After(currentTime) {
-			// Check if the sell price can match the buy price
-			if buyOrder.Price >= order.Price {
-				// A match is found, execute the trade
-				log.Printf("Matched Sell Order %d with Buy Order %d at price %d\n", order.ID, buyOrder.ID, buyOrder.Price)
-
-				// Remove the matched buy order
-				delete(ob.Orders, buyOrder.ID)
-
-				// Remove the matched buy order from the customer's orders
-				ob.removeOrderFromCustomerOrders(buyOrder.CustomerID, buyOrder.ID)
-
-				// Reinsert any skipped orders before returning
-				for _, skipped := range skippedOrders {
-					heap.Push(ob.BuyOrders, skipped)
-				}
-				return // Exit after successful match
-			}
-		} else {
-			delete(ob.Orders, buyOrder.ID)                                     // Remove expired buy orders
-			ob.removeOrderFromCustomerOrders(buyOrder.CustomerID, buyOrder.ID) // Remove the expired buy order from the customer's orders
-			continue
-		}
-
-		// No match found, push the buy order back and exit loop
-		heap.Push(ob.BuyOrders, buyOrder)
-		// Reinsert any skipped orders before exiting the loop
-		for _, skipped := range skippedOrders {
-			heap.Push(ob.BuyOrders, skipped)
-		}
-		break
-	}
-
-	// No match found, add the sell order to the list of active sell orders
-	heap.Push(ob.SellOrders, order)
-	ob.Orders[order.ID] = order
-
-	// Add the sell order to the CustomerOrders map
-	if ob.CustomerOrders[order.CustomerID] == nil {
-		ob.CustomerOrders[order.CustomerID] = make(map[int]*model.Order)
-	}
-	ob.CustomerOrders[order.CustomerID][order.ID] = order
 }
 
 // Helper function to remove an order from the CustomerOrders map
