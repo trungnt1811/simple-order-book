@@ -18,7 +18,7 @@ type OrderBook struct {
 	Orders         map[int]*model.Order         // All orders by ID
 	CustomerOrders map[int]map[int]*model.Order // Orders by customer ID and order ID
 	NextOrderID    int
-	mu             sync.Mutex
+	mtx            sync.RWMutex
 }
 
 // NewOrderBook creates a new OrderBook.
@@ -34,8 +34,8 @@ func NewOrderBook() *OrderBook {
 
 // SubmitOrder submits a new buy or sell order.
 func (ob *OrderBook) SubmitOrder(customerID int, price int, orderType constant.OrderType, gtt *time.Time) {
-	ob.mu.Lock()
-	defer ob.mu.Unlock()
+	ob.mtx.Lock()
+	defer ob.mtx.Unlock()
 
 	// Create a new order
 	order := &model.Order{
@@ -58,8 +58,8 @@ func (ob *OrderBook) SubmitOrder(customerID int, price int, orderType constant.O
 
 // CancelOrder cancels an existing order by ID.
 func (ob *OrderBook) CancelOrder(orderID int) error {
-	ob.mu.Lock()         // Lock the order book for safe concurrent access
-	defer ob.mu.Unlock() // Ensure the lock is released when the function returns
+	ob.mtx.Lock()
+	defer ob.mtx.Unlock()
 
 	// Check if the order exists in the order book
 	order, exists := ob.Orders[orderID]
@@ -85,8 +85,8 @@ func (ob *OrderBook) CancelOrder(orderID int) error {
 
 // QueryOrders returns all active orders for a given customer ID.
 func (ob *OrderBook) QueryOrders(customerID int) []*model.Order {
-	ob.mu.Lock()         // Lock the order book to prevent concurrent modifications
-	defer ob.mu.Unlock() // Ensure the lock is released after the function completes
+	ob.mtx.RLock()
+	defer ob.mtx.RUnlock()
 
 	activeOrders := []*model.Order{}
 	currentTime := time.Now()
