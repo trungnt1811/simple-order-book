@@ -111,8 +111,8 @@ func TestOrderHeap(t *testing.T) {
 
 			for i, expectedOrder := range tc.expectedOrders {
 				order := heap.Pop(orderHeap).(*model.Order)
-				require.Equal(t, expectedOrder.CustomerID, order.CustomerID, "Test case failed: %s. Order %d: expected customer ID %d, got %d", tc.name, i+1, expectedOrder.CustomerID, order.CustomerID)
-				require.Equal(t, expectedOrder.Price, order.Price, "Test case failed: %s. Order %d: expected price %d, got %d", tc.name, i+1, expectedOrder.Price, order.Price)
+				require.Equal(t, expectedOrder.CustomerID, order.CustomerID, "[%s] Order %d: expected customer ID %d, got %d", tc.name, i+1, expectedOrder.CustomerID, order.CustomerID)
+				require.Equal(t, expectedOrder.Price, order.Price, "[%s] Order %d: expected price %d, got %d", tc.name, i+1, expectedOrder.Price, order.Price)
 			}
 		})
 	}

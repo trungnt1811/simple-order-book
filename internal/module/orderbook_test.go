@@ -173,3 +173,88 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		require.Equal(t, 2, len(orderBook.CustomerOrders[customerID]), "Expected 2 orders for customer ID %d", customerID)
 	})
 }
+
+func TestOrderBook_CancelOrder(t *testing.T) {
+	// Test case 1: Cancel an existing order
+	t.Run("Cancel existing order", func(t *testing.T) {
+		// Create a new order book
+		orderBook := module.NewOrderBook()
+
+		orderID := orderBook.NextOrderID
+
+		// Submit initial order
+		customerID := 123
+		orderBook.SubmitOrder(customerID, 100, true, createGTT(1))
+
+		// Check if the order is added to the Orders map
+		_, exists := orderBook.Orders[orderID]
+		require.True(t, exists, "Order ID %d should exist in the Orders map", orderID)
+
+		// Check if the order is added to the CustomerOrders map
+		require.Equal(t, 1, len(orderBook.CustomerOrders[customerID]), "Unexpected number of orders for customer ID %d", customerID)
+
+		// Perform cancel existing order
+		orderBook.CancelOrder(orderID)
+
+		// Check if the order is removed from the Orders map
+		_, exists = orderBook.Orders[orderID]
+		require.False(t, exists, "Order ID %d should not exist in the Orders map", orderID)
+
+		// Check if the order is removed from the CustomerOrders map
+		require.Equal(t, 0, len(orderBook.CustomerOrders[customerID]), "Unexpected number of orders for customer ID %d", customerID)
+	})
+	t.Run("Cancel non-existent order", func(t *testing.T) {
+		// Create a new order book
+		orderBook := module.NewOrderBook()
+
+		orderID := orderBook.NextOrderID
+
+		// Submit initial order
+		customerID := 456
+		orderBook.SubmitOrder(customerID, 100, true, createGTT(1))
+
+		// Check if the order is added to the Orders map
+		_, exists := orderBook.Orders[orderID]
+		require.True(t, exists, "Order ID %d should exist in the Orders map", orderID)
+
+		// Check if the order is added to the CustomerOrders map
+		require.Equal(t, 1, len(orderBook.CustomerOrders[customerID]), "Unexpected number of orders for customer ID %d", customerID)
+
+		// Try to cancel a non-existent order
+		nonExistentOrderID := orderID + 1
+		orderBook.CancelOrder(nonExistentOrderID)
+
+		// Check if the order is still present in the Orders map
+		_, exists = orderBook.Orders[orderID]
+		require.True(t, exists, "Order ID %d should still exist in the Orders map", orderID)
+
+		// Check if the order is still present in the CustomerOrders map
+		require.Equal(t, 1, len(orderBook.CustomerOrders[customerID]), "Unexpected number of orders for customer ID %d", customerID)
+	})
+
+	t.Run("Cancel order in multi-order customer", func(t *testing.T) {
+		// Create a new order book
+		orderBook := module.NewOrderBook()
+
+		// Submit initial orders
+		customerID := 789
+		orderID1 := orderBook.NextOrderID
+		orderBook.SubmitOrder(customerID, 150, true, createGTT(1))
+		orderID2 := orderBook.NextOrderID
+		orderBook.SubmitOrder(customerID, 160, true, createGTT(1))
+
+		// Cancel the first order
+		orderBook.CancelOrder(orderID1)
+
+		// Check if the first order is removed from the Orders map
+		_, exists := orderBook.Orders[orderID1]
+		require.False(t, exists, "Order ID %d should not exist in the Orders map", orderID1)
+
+		// Check if the second order is still present in the Orders map
+		_, exists = orderBook.Orders[orderID2]
+		require.True(t, exists, "Order ID %d should exist in the Orders map", orderID2)
+
+		// Check if the CustomerOrders map is updated correctly
+		require.Equal(t, 1, len(orderBook.CustomerOrders[customerID]), "Unexpected number of orders for customer ID %d", customerID)
+	})
+}
