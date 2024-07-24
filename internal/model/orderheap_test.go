@@ -3,11 +3,12 @@ package model_test
 import (
 	"container/heap"
 	"testing"
+	"time"
 
 	"github.com/trungnt1811/simple-order-book/internal/model"
 )
 
-type ExpectedOrder struct {
+type expectedOrder struct {
 	CustomerID int
 	Price      int
 }
@@ -18,7 +19,7 @@ func TestOrderHeap(t *testing.T) {
 		name           string
 		desc           bool
 		orders         []*model.Order
-		expectedOrders []ExpectedOrder
+		expectedOrders []expectedOrder
 	}{
 		{
 			name: "Ascending order test (sell orders)",
@@ -29,23 +30,11 @@ func TestOrderHeap(t *testing.T) {
 				{CustomerID: 3, Price: 101},
 				{CustomerID: 4, Price: 98},
 			},
-			expectedOrders: []ExpectedOrder{
-				{
-					CustomerID: 4,
-					Price:      98,
-				},
-				{
-					CustomerID: 2,
-					Price:      99,
-				},
-				{
-					CustomerID: 1,
-					Price:      100,
-				},
-				{
-					CustomerID: 3,
-					Price:      101,
-				},
+			expectedOrders: []expectedOrder{
+				{CustomerID: 4, Price: 98},
+				{CustomerID: 2, Price: 99},
+				{CustomerID: 1, Price: 100},
+				{CustomerID: 3, Price: 101},
 			},
 		},
 		{
@@ -57,23 +46,57 @@ func TestOrderHeap(t *testing.T) {
 				{CustomerID: 3, Price: 101},
 				{CustomerID: 4, Price: 98},
 			},
-			expectedOrders: []ExpectedOrder{
-				{
-					CustomerID: 3,
-					Price:      101,
-				},
-				{
-					CustomerID: 1,
-					Price:      100,
-				},
-				{
-					CustomerID: 2,
-					Price:      99,
-				},
-				{
-					CustomerID: 4,
-					Price:      98,
-				},
+			expectedOrders: []expectedOrder{
+				{CustomerID: 3, Price: 101},
+				{CustomerID: 1, Price: 100},
+				{CustomerID: 2, Price: 99},
+				{CustomerID: 4, Price: 98},
+			},
+		},
+		{
+			name:           "Empty heap test",
+			desc:           true,
+			orders:         []*model.Order{},
+			expectedOrders: []expectedOrder{},
+		},
+		{
+			name: "Duplicate prices with various timestamps test (sell orders)",
+			desc: false,
+			orders: []*model.Order{
+				{CustomerID: 1, Price: 100, Timestamp: time.Now()},
+				{CustomerID: 2, Price: 100, Timestamp: time.Now().Add(1 * time.Second)},
+				{CustomerID: 3, Price: 100, Timestamp: time.Now().Add(2 * time.Second)},
+				{CustomerID: 2, Price: 99, Timestamp: time.Now().Add(3 * time.Second)},
+				{CustomerID: 4, Price: 99, Timestamp: time.Now().Add(4 * time.Second)},
+				{CustomerID: 5, Price: 101, Timestamp: time.Now().Add(5 * time.Second)},
+			},
+			expectedOrders: []expectedOrder{
+				{CustomerID: 2, Price: 99},
+				{CustomerID: 4, Price: 99},
+				{CustomerID: 1, Price: 100},
+				{CustomerID: 2, Price: 100},
+				{CustomerID: 3, Price: 100},
+				{CustomerID: 5, Price: 101},
+			},
+		},
+		{
+			name: "Duplicate prices with various timestamps test (buy orders)",
+			desc: true,
+			orders: []*model.Order{
+				{CustomerID: 1, Price: 100, Timestamp: time.Now()},
+				{CustomerID: 2, Price: 100, Timestamp: time.Now().Add(1 * time.Second)},
+				{CustomerID: 3, Price: 100, Timestamp: time.Now().Add(2 * time.Second)},
+				{CustomerID: 2, Price: 99, Timestamp: time.Now().Add(3 * time.Second)},
+				{CustomerID: 4, Price: 99, Timestamp: time.Now().Add(4 * time.Second)},
+				{CustomerID: 5, Price: 101, Timestamp: time.Now().Add(5 * time.Second)},
+			},
+			expectedOrders: []expectedOrder{
+				{CustomerID: 5, Price: 101},
+				{CustomerID: 1, Price: 100},
+				{CustomerID: 2, Price: 100},
+				{CustomerID: 3, Price: 100},
+				{CustomerID: 2, Price: 99},
+				{CustomerID: 4, Price: 99},
 			},
 		},
 	}
