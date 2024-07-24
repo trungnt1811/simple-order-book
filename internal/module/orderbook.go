@@ -35,7 +35,6 @@ func NewOrderBook(logger *zap.Logger) *OrderBook {
 	}
 }
 
-// SubmitOrder submits a new buy or sell order.
 func (ob *OrderBook) SubmitOrder(customerID uint, price uint, orderType constant.OrderType, gtt *time.Time) error {
 	ob.mtx.Lock()
 	defer ob.mtx.Unlock()
@@ -43,6 +42,11 @@ func (ob *OrderBook) SubmitOrder(customerID uint, price uint, orderType constant
 	// Validate inputs
 	if orderType != constant.BuyOrder && orderType != constant.SellOrder {
 		return fmt.Errorf("invalid order type")
+	}
+
+	// Validate price
+	if price == 0 {
+		return fmt.Errorf("invalid price")
 	}
 
 	// Create a new order
@@ -69,17 +73,14 @@ func (ob *OrderBook) CancelOrder(orderID uint64) error {
 	// Check if the order exists in the order book
 	order, exists := ob.Orders[orderID]
 	if !exists {
-		ob.logger.Warn("Order not found", zap.Uint64("orderID", orderID))
+		ob.logger.Debug("Order not found", zap.Uint64("orderID", orderID))
 		return fmt.Errorf("order not found: %d", orderID)
 	}
 
-	// Remove the order from the main order book
-	delete(ob.Orders, orderID)
+	// Remove the order
+	ob.removeOrder(order)
 
-	// Remove the order from the CustomerOrders map
-	ob.removeOrderFromCustomerOrders(order.CustomerID, orderID)
-
-	ob.logger.Info("Order cancelled", zap.Uint64("orderID", orderID))
+	ob.logger.Debug("Order cancelled", zap.Uint64("orderID", orderID))
 	return nil
 }
 
@@ -110,6 +111,7 @@ func (ob *OrderBook) matchOrder(order *model.Order, orderType constant.OrderType
 	// If the order's GTT (Good Til Time) is set and it is before the current time, the order is expired.
 	// Return immediately as expired orders cannot be matched.
 	if order.GTT != nil && order.GTT.Before(currentTime) {
+		ob.logger.Debug("Order expired before matching", zap.Uint64("orderID", order.ID))
 		return
 	}
 
@@ -153,8 +155,7 @@ func (ob *OrderBook) matchOrder(order *model.Order, orderType constant.OrderType
 				)
 
 				// Remove the matched opposite order
-				delete(ob.Orders, oppositeOrder.ID)
-				ob.removeOrderFromCustomerOrders(oppositeOrder.CustomerID, oppositeOrder.ID)
+				ob.removeOrder(oppositeOrder)
 
 				// Reinsert any skipped orders before returning
 				ob.reinsertSkippedOrders(oppositeOrders, skippedOrders)
@@ -162,8 +163,7 @@ func (ob *OrderBook) matchOrder(order *model.Order, orderType constant.OrderType
 			}
 		} else {
 			// Remove expired opposite orders
-			delete(ob.Orders, oppositeOrder.ID)
-			ob.removeOrderFromCustomerOrders(oppositeOrder.CustomerID, oppositeOrder.ID)
+			ob.removeOrder(oppositeOrder)
 			continue
 		}
 
@@ -185,22 +185,20 @@ func (ob *OrderBook) matchOrder(order *model.Order, orderType constant.OrderType
 	ob.CustomerOrders[order.CustomerID][order.ID] = order
 }
 
-// Helper function to reinsert skipped orders back into the heap
-func (ob *OrderBook) reinsertSkippedOrders(orders *model.OrderHeap, skippedOrders []*model.Order) {
-	if len(skippedOrders) == 0 {
-		return
-	}
-	for _, skipped := range skippedOrders {
-		heap.Push(orders, skipped)
+// Helper function to remove an order from all relevant data structures
+func (ob *OrderBook) removeOrder(order *model.Order) {
+	delete(ob.Orders, order.ID)
+	if customerOrders, ok := ob.CustomerOrders[order.CustomerID]; ok {
+		delete(customerOrders, order.ID)
+		if len(customerOrders) == 0 {
+			delete(ob.CustomerOrders, order.CustomerID)
+		}
 	}
 }
 
-// Helper function to remove an order from the CustomerOrders map
-func (ob *OrderBook) removeOrderFromCustomerOrders(customerID uint, orderID uint64) {
-	if customerOrders, ok := ob.CustomerOrders[customerID]; ok {
-		delete(customerOrders, orderID)
-		if len(customerOrders) == 0 {
-			delete(ob.CustomerOrders, customerID)
-		}
+// Helper function to reinsert skipped orders back into the heap
+func (ob *OrderBook) reinsertSkippedOrders(orders *model.OrderHeap, skippedOrders []*model.Order) {
+	for _, skipped := range skippedOrders {
+		heap.Push(orders, skipped)
 	}
 }
