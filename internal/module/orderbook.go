@@ -120,8 +120,7 @@ func (ob *OrderBook) matchBuyOrder(order *model.Order) {
 		sellOrder := heap.Pop(ob.SellOrders).(*model.Order)
 
 		// Skip if the sell order is not present in the Orders map
-		_, exists := ob.Orders[sellOrder.ID]
-		if !exists {
+		if _, exists := ob.Orders[sellOrder.ID]; !exists {
 			continue
 		}
 
@@ -193,8 +192,7 @@ func (ob *OrderBook) matchSellOrder(order *model.Order) {
 		buyOrder := heap.Pop(ob.BuyOrders).(*model.Order)
 
 		// Skip if the buy order is not present in the Orders map
-		_, exists := ob.Orders[buyOrder.ID]
-		if !exists {
+		if _, exists := ob.Orders[buyOrder.ID]; !exists {
 			continue
 		}
 
