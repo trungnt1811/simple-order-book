@@ -124,7 +124,13 @@ func (ob *OrderBook) matchBuyOrder(order *model.Order) {
 			if sellOrder.Price <= order.Price {
 				// A match is found, execute the trade
 				fmt.Printf("Matched Buy Order %d with Sell Order %d at price %d\n", order.ID, sellOrder.ID, sellOrder.Price)
-				delete(ob.Orders, sellOrder.ID) // Remove the matched sell order
+
+				// Remove the matched sell order
+				delete(ob.Orders, sellOrder.ID)
+
+				// Remove the matched sell order from the customer's orders
+				ob.removeOrderFromCustomerOrders(sellOrder.CustomerID, sellOrder.ID)
+
 				// Reinsert any skipped orders before returning
 				for _, skipped := range skippedOrders {
 					heap.Push(ob.SellOrders, skipped)
@@ -132,7 +138,8 @@ func (ob *OrderBook) matchBuyOrder(order *model.Order) {
 				return // Exit after successful match
 			}
 		} else {
-			delete(ob.Orders, sellOrder.ID) // Remove expired sell orders
+			delete(ob.Orders, sellOrder.ID)                                      // Remove expired sell orders
+			ob.removeOrderFromCustomerOrders(sellOrder.CustomerID, sellOrder.ID) // Remove the expired sell order from the customer's orders
 			continue
 		}
 
@@ -172,7 +179,13 @@ func (ob *OrderBook) matchSellOrder(order *model.Order) {
 			if buyOrder.Price >= order.Price {
 				// A match is found, execute the trade
 				fmt.Printf("Matched Sell Order %d with Buy Order %d at price %d\n", order.ID, buyOrder.ID, buyOrder.Price)
-				delete(ob.Orders, buyOrder.ID) // Remove the matched buy order
+
+				// Remove the matched buy order
+				delete(ob.Orders, buyOrder.ID)
+
+				// Remove the matched buy order from the customer's orders
+				ob.removeOrderFromCustomerOrders(buyOrder.CustomerID, buyOrder.ID)
+
 				// Reinsert any skipped orders before returning
 				for _, skipped := range skippedOrders {
 					heap.Push(ob.BuyOrders, skipped)
@@ -180,7 +193,8 @@ func (ob *OrderBook) matchSellOrder(order *model.Order) {
 				return // Exit after successful match
 			}
 		} else {
-			delete(ob.Orders, buyOrder.ID) // Remove expired buy orders
+			delete(ob.Orders, buyOrder.ID)                                     // Remove expired buy orders
+			ob.removeOrderFromCustomerOrders(buyOrder.CustomerID, buyOrder.ID) // Remove the expired buy order from the customer's orders
 			continue
 		}
 
@@ -197,4 +211,16 @@ func (ob *OrderBook) matchSellOrder(order *model.Order) {
 	heap.Push(ob.SellOrders, order)
 	ob.Orders[order.ID] = order
 	ob.CustomerOrders[order.CustomerID] = append(ob.CustomerOrders[order.CustomerID], order)
+}
+
+// Helper function to remove an order from the CustomerOrders map
+func (ob *OrderBook) removeOrderFromCustomerOrders(customerID, orderID int) {
+	customerOrders := ob.CustomerOrders[customerID]
+	for i, o := range customerOrders {
+		if o.ID == orderID {
+			// Remove the order from the slice of the customer's orders
+			ob.CustomerOrders[customerID] = append(customerOrders[:i], customerOrders[i+1:]...)
+			break
+		}
+	}
 }
