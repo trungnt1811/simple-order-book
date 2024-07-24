@@ -132,3 +132,201 @@ func TestOrderHeap(t *testing.T) {
 		})
 	}
 }
+
+func TestOrderHeapPopAndPush(t *testing.T) {
+	t.Run("Push to empty heap", func(t *testing.T) {
+		orderHeap := &model.OrderHeap{Desc: false}
+		order := &model.Order{
+			CustomerID: 1,
+			Price:      100,
+			Timestamp:  time.Now(),
+		}
+		heap.Push(orderHeap, order)
+
+		if orderHeap.Len() != 1 {
+			t.Errorf("Expected heap length 1, got %d", orderHeap.Len())
+		}
+
+		poppedOrder := heap.Pop(orderHeap).(*model.Order)
+		if poppedOrder.CustomerID != 1 || poppedOrder.Price != 100 {
+			t.Errorf("Expected order with CustomerID %d and Price %d, got CustomerID %d and Price %d",
+				order.CustomerID, order.Price, poppedOrder.CustomerID, poppedOrder.Price)
+		}
+	})
+
+	t.Run("Push to non-empty heap (sell orders)", func(t *testing.T) {
+		orderHeap := &model.OrderHeap{Desc: false}
+		orders := []*model.Order{
+			{CustomerID: 1, Price: 100, Timestamp: time.Now()},
+			{CustomerID: 2, Price: 99, Timestamp: time.Now()},
+		}
+		for _, order := range orders {
+			heap.Push(orderHeap, order)
+		}
+		pushOrder := &model.Order{
+			CustomerID: 3,
+			Price:      98,
+			Timestamp:  time.Now(),
+		}
+		heap.Push(orderHeap, pushOrder)
+
+		expectedOrders := []expectedOrder{
+			{CustomerID: 3, Price: 98},
+			{CustomerID: 2, Price: 99},
+			{CustomerID: 1, Price: 100},
+		}
+
+		for i, expectedOrder := range expectedOrders {
+			order := heap.Pop(orderHeap).(*model.Order)
+			if order.CustomerID != expectedOrder.CustomerID || order.Price != expectedOrder.Price {
+				t.Errorf("Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d",
+					i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
+			}
+		}
+	})
+
+	t.Run("Push to non-empty heap (buy orders)", func(t *testing.T) {
+		orderHeap := &model.OrderHeap{Desc: true}
+		orders := []*model.Order{
+			{CustomerID: 1, Price: 100, Timestamp: time.Now()},
+			{CustomerID: 2, Price: 99, Timestamp: time.Now()},
+		}
+		for _, order := range orders {
+			heap.Push(orderHeap, order)
+		}
+		pushOrder := &model.Order{
+			CustomerID: 3,
+			Price:      101,
+			Timestamp:  time.Now(),
+		}
+		heap.Push(orderHeap, pushOrder)
+
+		expectedOrders := []expectedOrder{
+			{CustomerID: 3, Price: 101},
+			{CustomerID: 1, Price: 100},
+			{CustomerID: 2, Price: 99},
+		}
+
+		for i, expectedOrder := range expectedOrders {
+			order := heap.Pop(orderHeap).(*model.Order)
+			if order.CustomerID != expectedOrder.CustomerID || order.Price != expectedOrder.Price {
+				t.Errorf("Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d",
+					i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
+			}
+		}
+	})
+
+	t.Run("Pop from heap and push new order (sell orders)", func(t *testing.T) {
+		orderHeap := &model.OrderHeap{Desc: false}
+		orders := []*model.Order{
+			{CustomerID: 1, Price: 100, Timestamp: time.Now()},
+			{CustomerID: 2, Price: 99, Timestamp: time.Now()},
+		}
+		for _, order := range orders {
+			heap.Push(orderHeap, order)
+		}
+		heap.Pop(orderHeap)
+		pushOrder := &model.Order{
+			CustomerID: 3,
+			Price:      101,
+			Timestamp:  time.Now(),
+		}
+		heap.Push(orderHeap, pushOrder)
+
+		expectedOrders := []expectedOrder{
+			{CustomerID: 1, Price: 100},
+			{CustomerID: 3, Price: 101},
+		}
+
+		for i, expectedOrder := range expectedOrders {
+			order := heap.Pop(orderHeap).(*model.Order)
+			if order.CustomerID != expectedOrder.CustomerID || order.Price != expectedOrder.Price {
+				t.Errorf("Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d",
+					i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
+			}
+		}
+	})
+
+	t.Run("Pop from heap and push new order (buy orders)", func(t *testing.T) {
+		orderHeap := &model.OrderHeap{Desc: true}
+		orders := []*model.Order{
+			{CustomerID: 1, Price: 100, Timestamp: time.Now()},
+			{CustomerID: 2, Price: 99, Timestamp: time.Now()},
+		}
+		for _, order := range orders {
+			heap.Push(orderHeap, order)
+		}
+		heap.Pop(orderHeap)
+		pushOrder := &model.Order{
+			CustomerID: 3,
+			Price:      98,
+			Timestamp:  time.Now(),
+		}
+		heap.Push(orderHeap, pushOrder)
+
+		expectedOrders := []expectedOrder{
+			{CustomerID: 2, Price: 99},
+			{CustomerID: 3, Price: 98},
+		}
+
+		for i, expectedOrder := range expectedOrders {
+			order := heap.Pop(orderHeap).(*model.Order)
+			if order.CustomerID != expectedOrder.CustomerID || order.Price != expectedOrder.Price {
+				t.Errorf("Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d",
+					i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
+			}
+		}
+	})
+
+	t.Run("Pop from heap and push order that was recently popped (sell orders)", func(t *testing.T) {
+		orderHeap := &model.OrderHeap{Desc: false}
+		orders := []*model.Order{
+			{CustomerID: 1, Price: 100, Timestamp: time.Now()},
+			{CustomerID: 2, Price: 99, Timestamp: time.Now()},
+		}
+		for _, order := range orders {
+			heap.Push(orderHeap, order)
+		}
+		poppedOrder := heap.Pop(orderHeap).(*model.Order)
+		heap.Push(orderHeap, poppedOrder)
+
+		expectedOrders := []expectedOrder{
+			{CustomerID: 2, Price: 99},
+			{CustomerID: 1, Price: 100},
+		}
+
+		for i, expectedOrder := range expectedOrders {
+			order := heap.Pop(orderHeap).(*model.Order)
+			if order.CustomerID != expectedOrder.CustomerID || order.Price != expectedOrder.Price {
+				t.Errorf("Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d",
+					i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
+			}
+		}
+	})
+
+	t.Run("Pop from heap and push order that was recently popped (buy orders)", func(t *testing.T) {
+		orderHeap := &model.OrderHeap{Desc: true}
+		orders := []*model.Order{
+			{CustomerID: 1, Price: 100, Timestamp: time.Now()},
+			{CustomerID: 2, Price: 99, Timestamp: time.Now()},
+		}
+		for _, order := range orders {
+			heap.Push(orderHeap, order)
+		}
+		poppedOrder := heap.Pop(orderHeap).(*model.Order)
+		heap.Push(orderHeap, poppedOrder)
+
+		expectedOrders := []expectedOrder{
+			{CustomerID: 1, Price: 100},
+			{CustomerID: 2, Price: 99},
+		}
+
+		for i, expectedOrder := range expectedOrders {
+			order := heap.Pop(orderHeap).(*model.Order)
+			if order.CustomerID != expectedOrder.CustomerID || order.Price != expectedOrder.Price {
+				t.Errorf("Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d",
+					i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
+			}
+		}
+	})
+}
