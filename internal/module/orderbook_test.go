@@ -178,6 +178,38 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 			t.Errorf("Expected 0 orders for customer ID %d, got %d", customerID, len(orderBook.CustomerOrders[customerID]))
 		}
 	})
+
+	// Test case 9: Submit Orders from Same Customer with Same Prices but Different Timestamp
+	t.Run("Submit Orders from Same Customer with Same Prices but Different Timestamp", func(t *testing.T) {
+		// Create a new order book
+		orderBook := module.NewOrderBook()
+
+		customerID := 69
+		orderID1 := orderBook.NextOrderID
+		orderBook.SubmitOrder(customerID, 100, true, createGTT(1))
+
+		// Change the timestamp but same price
+		orderID2 := orderBook.NextOrderID
+		orderBook.SubmitOrder(customerID, 100, true, createGTT(2))
+
+		// Check if both orders are added to the BuyOrders heap
+		if orderBook.BuyOrders.Len() != 2 {
+			t.Errorf("Expected 2 buy orders in the heap, got %d", orderBook.BuyOrders.Len())
+		}
+
+		// Check if both orders are added to the Orders map
+		if _, exists := orderBook.Orders[orderID1]; !exists {
+			t.Errorf("Order ID %d should exist in the Orders map", orderID1)
+		}
+		if _, exists := orderBook.Orders[orderID2]; !exists {
+			t.Errorf("Order ID %d should exist in the Orders map", orderID2)
+		}
+
+		// Check if both orders are added to the CustomerOrders map
+		if len(orderBook.CustomerOrders[customerID]) != 2 {
+			t.Errorf("Expected 2 orders for customer ID %d, got %d", customerID, len(orderBook.CustomerOrders[customerID]))
+		}
+	})
 }
 
 // Helper function to create a GTT time.
