@@ -1,6 +1,7 @@
 package module_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -221,7 +222,8 @@ func TestOrderBook_CancelOrder(t *testing.T) {
 		require.Equal(t, 1, len(orderBook.CustomerOrders[customerID]), "Unexpected number of orders for customer ID %d", customerID)
 
 		// Perform cancel existing order
-		orderBook.CancelOrder(orderID)
+		err := orderBook.CancelOrder(orderID)
+		require.NoError(t, err, "CancelOrder should not return an error")
 
 		// Check if the order is removed from the Orders map
 		_, exists = orderBook.Orders[orderID]
@@ -249,7 +251,8 @@ func TestOrderBook_CancelOrder(t *testing.T) {
 
 		// Try to cancel a non-existent order
 		nonExistentOrderID := orderID + 1
-		orderBook.CancelOrder(nonExistentOrderID)
+		err := orderBook.CancelOrder(nonExistentOrderID)
+		require.Error(t, err, fmt.Sprintf("order not found: %d", nonExistentOrderID))
 
 		// Check if the order is still present in the Orders map
 		_, exists = orderBook.Orders[orderID]
@@ -271,7 +274,8 @@ func TestOrderBook_CancelOrder(t *testing.T) {
 		orderBook.SubmitOrder(customerID, 160, constant.BuyOrder, createGTT(1))
 
 		// Cancel the first order
-		orderBook.CancelOrder(orderID1)
+		err := orderBook.CancelOrder(orderID1)
+		require.NoError(t, err, "CancelOrder should not return an error")
 
 		// Check if the first order is removed from the Orders map
 		_, exists := orderBook.Orders[orderID1]

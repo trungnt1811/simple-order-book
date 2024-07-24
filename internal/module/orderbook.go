@@ -3,6 +3,7 @@ package module
 import (
 	"container/heap"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -56,15 +57,15 @@ func (ob *OrderBook) SubmitOrder(customerID int, price int, orderType constant.O
 }
 
 // CancelOrder cancels an existing order by ID.
-func (ob *OrderBook) CancelOrder(orderID int) {
+func (ob *OrderBook) CancelOrder(orderID int) error {
 	ob.mu.Lock()         // Lock the order book for safe concurrent access
 	defer ob.mu.Unlock() // Ensure the lock is released when the function returns
 
 	// Check if the order exists in the order book
 	order, exists := ob.Orders[orderID]
 	if !exists {
-		fmt.Println("Order not found") // Inform the user if the order is not found
-		return
+		log.Printf("Order not found: %d", orderID)
+		return fmt.Errorf("order not found: %d", orderID)
 	}
 
 	// Remove the order from the main order book
@@ -78,7 +79,8 @@ func (ob *OrderBook) CancelOrder(orderID int) {
 		}
 	}
 
-	fmt.Printf("Order %d cancelled\n", orderID) // Confirm the cancellation
+	log.Printf("Order %d cancelled", orderID)
+	return nil
 }
 
 // QueryOrders returns all active orders for a given customer ID.
@@ -134,7 +136,7 @@ func (ob *OrderBook) matchBuyOrder(order *model.Order) {
 			// Check if the buy price can match the sell price
 			if sellOrder.Price <= order.Price {
 				// A match is found, execute the trade
-				fmt.Printf("Matched Buy Order %d with Sell Order %d at price %d\n", order.ID, sellOrder.ID, sellOrder.Price)
+				log.Printf("Matched Buy Order %d with Sell Order %d at price %d\n", order.ID, sellOrder.ID, sellOrder.Price)
 
 				// Remove the matched sell order
 				delete(ob.Orders, sellOrder.ID)
@@ -207,7 +209,7 @@ func (ob *OrderBook) matchSellOrder(order *model.Order) {
 			// Check if the sell price can match the buy price
 			if buyOrder.Price >= order.Price {
 				// A match is found, execute the trade
-				fmt.Printf("Matched Sell Order %d with Buy Order %d at price %d\n", order.ID, buyOrder.ID, buyOrder.Price)
+				log.Printf("Matched Sell Order %d with Buy Order %d at price %d\n", order.ID, buyOrder.ID, buyOrder.Price)
 
 				// Remove the matched buy order
 				delete(ob.Orders, buyOrder.ID)
