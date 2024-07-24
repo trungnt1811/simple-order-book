@@ -165,6 +165,40 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		// Check if both orders are added to the CustomerOrders map
 		require.Equal(t, 2, len(orderBook.CustomerOrders[customerID]), "Expected 2 orders for customer ID %d", customerID)
 	})
+
+	t.Run("Match Cancelled Order", func(t *testing.T) {
+		// Create a new order book
+		orderBook := module.NewOrderBook()
+
+		// Submit and then cancel a buy order
+		buyCustomerID := 3456
+		buyOrderID := orderBook.NextOrderID
+		orderBook.SubmitOrder(buyCustomerID, 95, true, createGTT(1))
+		orderBook.CancelOrder(buyOrderID)
+
+		// Submit a sell order with matching price
+		sellCustomerID := 7890
+		sellOrderID := orderBook.NextOrderID
+		orderBook.SubmitOrder(sellCustomerID, 95, false, createGTT(1))
+
+		// Check if the cancelled buy order is not matched
+		require.Equal(t, 0, orderBook.BuyOrders.Len(), "Expected 0 buy orders in the heap after cancellation")
+		require.Equal(t, 1, orderBook.SellOrders.Len(), "Expected 1 sell order in the heap after attempting to match with cancelled buy order")
+
+		// Check if the sell order is still present in the Orders map
+		_, sellOrderExists := orderBook.Orders[sellOrderID]
+		require.True(t, sellOrderExists, "Sell order ID %d should exist in the Orders map", sellOrderID)
+
+		// Check if the cancelled buy order is not in the Orders map
+		_, buyOrderExists := orderBook.Orders[buyOrderID]
+		require.False(t, buyOrderExists, "Cancelled buy order ID %d should not exist in the Orders map", buyOrderID)
+
+		// Check if the sell order is added to the CustomerOrders map
+		require.Equal(t, 1, len(orderBook.CustomerOrders[sellCustomerID]), "Expected 1 order for customer ID %d", sellCustomerID)
+
+		// Check if the cancelled buy order is not in the CustomerOrders map
+		require.Equal(t, 0, len(orderBook.CustomerOrders[buyCustomerID]), "Expected 0 orders for customer ID %d", buyCustomerID)
+	})
 }
 
 func TestOrderBook_CancelOrder(t *testing.T) {
