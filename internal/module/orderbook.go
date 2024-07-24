@@ -33,17 +33,11 @@ func NewOrderBook() *OrderBook {
 }
 
 // SubmitOrder submits a new buy or sell order.
-func (ob *OrderBook) SubmitOrder(customerID uint, price int, orderType constant.OrderType, gtt *time.Time) error {
+func (ob *OrderBook) SubmitOrder(customerID uint, price uint, orderType constant.OrderType, gtt *time.Time) error {
 	ob.mtx.Lock()
 	defer ob.mtx.Unlock()
 
 	// Validate inputs
-	if price < 0 {
-		return fmt.Errorf("price cannot be negative")
-	}
-	if customerID <= 0 {
-		return fmt.Errorf("invalid customer ID")
-	}
 	if orderType != constant.BuyOrder && orderType != constant.SellOrder {
 		return fmt.Errorf("invalid order type")
 	}

@@ -11,8 +11,8 @@ import (
 )
 
 type expectedOrder struct {
-	CustomerID int
-	Price      int
+	CustomerID uint
+	Price      uint
 }
 
 // TestOrderHeap tests the OrderHeap implementation.
