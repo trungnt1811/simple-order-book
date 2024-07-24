@@ -153,14 +153,17 @@ func (ob *OrderBook) matchOrder(order *model.Order, orderType constant.OrderType
 				)
 
 				// Remove the matched opposite order
-				ob.removeOrder(oppositeOrder)
+				delete(ob.Orders, oppositeOrder.ID)
+				ob.removeOrderFromCustomerOrders(oppositeOrder.CustomerID, oppositeOrder.ID)
 
 				// Reinsert any skipped orders before returning
 				ob.reinsertSkippedOrders(oppositeOrders, skippedOrders)
 				return // Exit after successful match
 			}
 		} else {
-			ob.removeOrder(oppositeOrder) // Remove expired opposite orders
+			// Remove expired opposite orders
+			delete(ob.Orders, oppositeOrder.ID)
+			ob.removeOrderFromCustomerOrders(oppositeOrder.CustomerID, oppositeOrder.ID)
 			continue
 		}
 
@@ -180,12 +183,6 @@ func (ob *OrderBook) matchOrder(order *model.Order, orderType constant.OrderType
 		ob.CustomerOrders[order.CustomerID] = make(map[uint64]*model.Order)
 	}
 	ob.CustomerOrders[order.CustomerID][order.ID] = order
-}
-
-// Helper function to remove an order from the Orders map and CustomerOrders map
-func (ob *OrderBook) removeOrder(order *model.Order) {
-	delete(ob.Orders, order.ID)
-	ob.removeOrderFromCustomerOrders(order.CustomerID, order.ID)
 }
 
 // Helper function to reinsert skipped orders back into the heap
