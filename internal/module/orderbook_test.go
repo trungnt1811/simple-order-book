@@ -4,8 +4,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"github.com/trungnt1811/simple-order-book/internal/module"
 )
+
+// Helper function to create a GTT time.
+func createGTT(hours int) *time.Time {
+	gtt := time.Now().Add(time.Duration(hours) * time.Hour)
+	return &gtt
+}
 
 // TestSubmitOrder tests the SubmitOrder function.
 func TestOrderBook_SubmitOrder(t *testing.T) {
@@ -19,19 +26,14 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		orderBook.SubmitOrder(customerID, 100, true, createGTT(1))
 
 		// Check if the order is added to the BuyOrders heap
-		if orderBook.BuyOrders.Len() != 1 {
-			t.Errorf("Expected 1 buy order in the heap, got %d", orderBook.BuyOrders.Len())
-		}
+		require.Equal(t, 1, orderBook.BuyOrders.Len(), "Expected 1 buy order in the heap")
 
 		// Check if the order is added to the Orders map
-		if _, exists := orderBook.Orders[orderID]; !exists {
-			t.Errorf("Order ID %d should exist in the Orders map", orderID)
-		}
+		_, exists := orderBook.Orders[orderID]
+		require.True(t, exists, "Order ID %d should exist in the Orders map", orderID)
 
 		// Check if the order is added to the CustomerOrders map
-		if len(orderBook.CustomerOrders[customerID]) != 1 {
-			t.Errorf("Expected 1 order for customer ID %d, got %d", customerID, len(orderBook.CustomerOrders[customerID]))
-		}
+		require.Equal(t, 1, len(orderBook.CustomerOrders[customerID]), "Expected 1 order for customer ID %d", customerID)
 	})
 
 	// Test case 2: Submit a sell order
@@ -44,19 +46,14 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		orderBook.SubmitOrder(customerID, 90, false, createGTT(1))
 
 		// Check if the order is added to the SellOrders heap
-		if orderBook.SellOrders.Len() != 1 {
-			t.Errorf("Expected 1 sell order in the heap, got %d", orderBook.SellOrders.Len())
-		}
+		require.Equal(t, 1, orderBook.SellOrders.Len(), "Expected 1 sell order in the heap")
 
 		// Check if the order is added to the Orders map
-		if _, exists := orderBook.Orders[orderID]; !exists {
-			t.Errorf("Order ID %d should exist in the Orders map", orderID)
-		}
+		_, exists := orderBook.Orders[orderID]
+		require.True(t, exists, "Order ID %d should exist in the Orders map", orderID)
 
 		// Check if the order is added to the CustomerOrders map
-		if len(orderBook.CustomerOrders[customerID]) != 1 {
-			t.Errorf("Expected 1 order for customer ID %d, got %d", customerID, len(orderBook.CustomerOrders[customerID]))
-		}
+		require.Equal(t, 1, len(orderBook.CustomerOrders[customerID]), "Expected 1 order for customer ID %d", customerID)
 	})
 
 	// Test case 3: Submit a buy order that matches an existing sell order
@@ -75,37 +72,22 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		orderBook.SubmitOrder(buyCustomerID, 90, true, createGTT(1))
 
 		// Check if the buy order is matched and not in the heap
-		if orderBook.BuyOrders.Len() != 0 {
-			t.Errorf("Expected 0 buy orders in the heap, got %d", orderBook.BuyOrders.Len())
-		}
+		require.Equal(t, 0, orderBook.BuyOrders.Len(), "Expected 0 buy orders in the heap")
 
 		// Check if the sell order is removed from the heap
-		if orderBook.SellOrders.Len() != 0 {
-			t.Errorf("Expected 0 sell orders in the heap, got %d", orderBook.SellOrders.Len())
-		}
-
-		// Check if the buy order is not added to the heap
-		if orderBook.BuyOrders.Len() != 0 {
-			t.Errorf("Expected 0 buy orders in the heap, got %d", orderBook.BuyOrders.Len())
-		}
+		require.Equal(t, 0, orderBook.SellOrders.Len(), "Expected 0 sell orders in the heap")
 
 		// Check if the matched orders are removed from the Orders map
-		if _, exists := orderBook.Orders[sellOrderID]; exists {
-			t.Errorf("Order ID %d should not exist in the Orders map", sellOrderID)
-		}
-		if _, exists := orderBook.Orders[buyOrderID]; exists {
-			t.Errorf("Order ID %d should not exist in the Orders map", buyOrderID)
-		}
+		_, sellOrderExists := orderBook.Orders[sellOrderID]
+		require.False(t, sellOrderExists, "Order ID %d should not exist in the Orders map", sellOrderID)
+		_, buyOrderExists := orderBook.Orders[buyOrderID]
+		require.False(t, buyOrderExists, "Order ID %d should not exist in the Orders map", buyOrderID)
 
 		// Check if the sell order is removed from the CustomerOrders map
-		if len(orderBook.CustomerOrders[sellCustomerID]) != 0 {
-			t.Errorf("Expected 0 order for customer ID %d, got %d", sellCustomerID, len(orderBook.CustomerOrders[sellCustomerID]))
-		}
+		require.Equal(t, 0, len(orderBook.CustomerOrders[sellCustomerID]), "Expected 0 order for customer ID %d", sellCustomerID)
 
 		// Check if the buy order is not added to the CustomerOrders map
-		if len(orderBook.CustomerOrders[buyCustomerID]) != 0 {
-			t.Errorf("Expected 0 order for customer ID %d, got %d", buyCustomerID, len(orderBook.CustomerOrders[buyCustomerID]))
-		}
+		require.Equal(t, 0, len(orderBook.CustomerOrders[buyCustomerID]), "Expected 0 order for customer ID %d", buyCustomerID)
 	})
 
 	// Test case 4: Submit an order with a nil GTT
@@ -118,19 +100,14 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		orderBook.SubmitOrder(customerID, 110, true, nil)
 
 		// Check if the order is added to the BuyOrders heap
-		if orderBook.BuyOrders.Len() != 1 {
-			t.Errorf("Expected 1 buy order in the heap, got %d", orderBook.BuyOrders.Len())
-		}
+		require.Equal(t, 1, orderBook.BuyOrders.Len(), "Expected 1 buy order in the heap")
 
 		// Check if the order is added to the Orders map
-		if _, exists := orderBook.Orders[orderID]; !exists {
-			t.Errorf("Order ID %d should exist in the Orders map", orderID)
-		}
+		_, exists := orderBook.Orders[orderID]
+		require.True(t, exists, "Order ID %d should exist in the Orders map", orderID)
 
 		// Check if the order is added to the CustomerOrders map
-		if len(orderBook.CustomerOrders[customerID]) != 1 {
-			t.Errorf("Expected 1 order for customer ID %d, got %d", customerID, len(orderBook.CustomerOrders[customerID]))
-		}
+		require.Equal(t, 1, len(orderBook.CustomerOrders[customerID]), "Expected 1 order for customer ID %d", customerID)
 	})
 
 	// Test case 5: Submit multiple orders from the same customer
@@ -143,14 +120,10 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		orderBook.SubmitOrder(customerID, 130, false, createGTT(3))
 
 		// Check if the orders are added to the SellOrders heap
-		if orderBook.SellOrders.Len() != 2 {
-			t.Errorf("Expected 2 sell orders in the heap, got %d", orderBook.SellOrders.Len())
-		}
+		require.Equal(t, 2, orderBook.SellOrders.Len(), "Expected 2 sell orders in the heap")
 
 		// Check if the orders are added to the CustomerOrders map
-		if len(orderBook.CustomerOrders[customerID]) != 2 {
-			t.Errorf("Expected 2 orders for customer ID 1, got %d", len(orderBook.CustomerOrders[customerID]))
-		}
+		require.Equal(t, 2, len(orderBook.CustomerOrders[customerID]), "Expected 2 orders for customer ID %d", customerID)
 	})
 
 	// Test case 6: Submit an order with an expired GTT
@@ -164,19 +137,14 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		orderBook.SubmitOrder(customerID, 95, false, &expiredGTT)
 
 		// Check if the order is not added to the SellOrders heap
-		if orderBook.SellOrders.Len() != 0 {
-			t.Errorf("Expected 0 sell orders in the heap, got %d", orderBook.SellOrders.Len())
-		}
+		require.Equal(t, 0, orderBook.SellOrders.Len(), "Expected 0 sell orders in the heap")
 
 		// Check if the order is not added to the Orders map
-		if _, exists := orderBook.Orders[orderID]; exists {
-			t.Errorf("Order ID %d should not exist in the Orders map", orderID)
-		}
+		_, exists := orderBook.Orders[orderID]
+		require.False(t, exists, "Order ID %d should not exist in the Orders map", orderID)
 
 		// Check if the order is not added to the CustomerOrders map
-		if len(orderBook.CustomerOrders[customerID]) != 0 {
-			t.Errorf("Expected 0 orders for customer ID %d, got %d", customerID, len(orderBook.CustomerOrders[customerID]))
-		}
+		require.Equal(t, 0, len(orderBook.CustomerOrders[customerID]), "Expected 0 orders for customer ID %d", customerID)
 	})
 
 	// Test case 9: Submit Orders from Same Customer with Same Prices but Different Timestamp
@@ -193,27 +161,15 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		orderBook.SubmitOrder(customerID, 100, true, createGTT(2))
 
 		// Check if both orders are added to the BuyOrders heap
-		if orderBook.BuyOrders.Len() != 2 {
-			t.Errorf("Expected 2 buy orders in the heap, got %d", orderBook.BuyOrders.Len())
-		}
+		require.Equal(t, 2, orderBook.BuyOrders.Len(), "Expected 2 buy orders in the heap")
 
 		// Check if both orders are added to the Orders map
-		if _, exists := orderBook.Orders[orderID1]; !exists {
-			t.Errorf("Order ID %d should exist in the Orders map", orderID1)
-		}
-		if _, exists := orderBook.Orders[orderID2]; !exists {
-			t.Errorf("Order ID %d should exist in the Orders map", orderID2)
-		}
+		_, exists1 := orderBook.Orders[orderID1]
+		require.True(t, exists1, "Order ID %d should exist in the Orders map", orderID1)
+		_, exists2 := orderBook.Orders[orderID2]
+		require.True(t, exists2, "Order ID %d should exist in the Orders map", orderID2)
 
 		// Check if both orders are added to the CustomerOrders map
-		if len(orderBook.CustomerOrders[customerID]) != 2 {
-			t.Errorf("Expected 2 orders for customer ID %d, got %d", customerID, len(orderBook.CustomerOrders[customerID]))
-		}
+		require.Equal(t, 2, len(orderBook.CustomerOrders[customerID]), "Expected 2 orders for customer ID %d", customerID)
 	})
-}
-
-// Helper function to create a GTT time.
-func createGTT(hours int) *time.Time {
-	gtt := time.Now().Add(time.Duration(hours) * time.Hour)
-	return &gtt
 }

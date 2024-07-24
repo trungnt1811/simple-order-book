@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"github.com/trungnt1811/simple-order-book/internal/model"
 )
 
@@ -110,24 +111,8 @@ func TestOrderHeap(t *testing.T) {
 
 			for i, expectedOrder := range tc.expectedOrders {
 				order := heap.Pop(orderHeap).(*model.Order)
-				if order.CustomerID != expectedOrder.CustomerID {
-					t.Errorf(
-						"Test case failed: %s. Order %d: expected customer ID %d, got %d",
-						tc.name,
-						i+1,
-						expectedOrder.CustomerID,
-						order.CustomerID,
-					)
-				}
-				if order.Price != expectedOrder.Price {
-					t.Errorf(
-						"Test case failed: %s. Order %d: expected price %d, got %d",
-						tc.name,
-						i+1,
-						expectedOrder.Price,
-						order.Price,
-					)
-				}
+				require.Equal(t, expectedOrder.CustomerID, order.CustomerID, "Test case failed: %s. Order %d: expected customer ID %d, got %d", tc.name, i+1, expectedOrder.CustomerID, order.CustomerID)
+				require.Equal(t, expectedOrder.Price, order.Price, "Test case failed: %s. Order %d: expected price %d, got %d", tc.name, i+1, expectedOrder.Price, order.Price)
 			}
 		})
 	}
@@ -144,15 +129,11 @@ func TestOrderHeap_PopAndPush(t *testing.T) {
 		}
 		heap.Push(orderHeap, order)
 
-		if orderHeap.Len() != 1 {
-			t.Errorf("Expected heap length 1, got %d", orderHeap.Len())
-		}
+		require.Equal(t, 1, orderHeap.Len(), "Expected heap length 1, got %d", orderHeap.Len())
 
 		poppedOrder := heap.Pop(orderHeap).(*model.Order)
-		if poppedOrder.CustomerID != 1 || poppedOrder.Price != 100 {
-			t.Errorf("Expected order with CustomerID %d and Price %d, got CustomerID %d and Price %d",
-				order.CustomerID, order.Price, poppedOrder.CustomerID, poppedOrder.Price)
-		}
+		require.Equal(t, order.CustomerID, poppedOrder.CustomerID, "Expected order with CustomerID %d and Price %d, got CustomerID %d and Price %d", order.CustomerID, order.Price, poppedOrder.CustomerID, poppedOrder.Price)
+		require.Equal(t, order.Price, poppedOrder.Price, "Expected order with CustomerID %d and Price %d, got CustomerID %d and Price %d", order.CustomerID, order.Price, poppedOrder.CustomerID, poppedOrder.Price)
 	})
 
 	t.Run("Push to non-empty heap (sell orders)", func(t *testing.T) {
@@ -179,10 +160,8 @@ func TestOrderHeap_PopAndPush(t *testing.T) {
 
 		for i, expectedOrder := range expectedOrders {
 			order := heap.Pop(orderHeap).(*model.Order)
-			if order.CustomerID != expectedOrder.CustomerID || order.Price != expectedOrder.Price {
-				t.Errorf("Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d",
-					i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
-			}
+			require.Equal(t, expectedOrder.CustomerID, order.CustomerID, "Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d", i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
+			require.Equal(t, expectedOrder.Price, order.Price, "Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d", i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
 		}
 	})
 
@@ -210,10 +189,8 @@ func TestOrderHeap_PopAndPush(t *testing.T) {
 
 		for i, expectedOrder := range expectedOrders {
 			order := heap.Pop(orderHeap).(*model.Order)
-			if order.CustomerID != expectedOrder.CustomerID || order.Price != expectedOrder.Price {
-				t.Errorf("Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d",
-					i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
-			}
+			require.Equal(t, expectedOrder.CustomerID, order.CustomerID, "Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d", i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
+			require.Equal(t, expectedOrder.Price, order.Price, "Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d", i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
 		}
 	})
 
@@ -241,10 +218,8 @@ func TestOrderHeap_PopAndPush(t *testing.T) {
 
 		for i, expectedOrder := range expectedOrders {
 			order := heap.Pop(orderHeap).(*model.Order)
-			if order.CustomerID != expectedOrder.CustomerID || order.Price != expectedOrder.Price {
-				t.Errorf("Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d",
-					i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
-			}
+			require.Equal(t, expectedOrder.CustomerID, order.CustomerID, "Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d", i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
+			require.Equal(t, expectedOrder.Price, order.Price, "Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d", i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
 		}
 	})
 
@@ -272,10 +247,8 @@ func TestOrderHeap_PopAndPush(t *testing.T) {
 
 		for i, expectedOrder := range expectedOrders {
 			order := heap.Pop(orderHeap).(*model.Order)
-			if order.CustomerID != expectedOrder.CustomerID || order.Price != expectedOrder.Price {
-				t.Errorf("Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d",
-					i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
-			}
+			require.Equal(t, expectedOrder.CustomerID, order.CustomerID, "Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d", i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
+			require.Equal(t, expectedOrder.Price, order.Price, "Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d", i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
 		}
 	})
 
@@ -298,10 +271,8 @@ func TestOrderHeap_PopAndPush(t *testing.T) {
 
 		for i, expectedOrder := range expectedOrders {
 			order := heap.Pop(orderHeap).(*model.Order)
-			if order.CustomerID != expectedOrder.CustomerID || order.Price != expectedOrder.Price {
-				t.Errorf("Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d",
-					i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
-			}
+			require.Equal(t, expectedOrder.CustomerID, order.CustomerID, "Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d", i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
+			require.Equal(t, expectedOrder.Price, order.Price, "Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d", i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
 		}
 	})
 
@@ -324,10 +295,8 @@ func TestOrderHeap_PopAndPush(t *testing.T) {
 
 		for i, expectedOrder := range expectedOrders {
 			order := heap.Pop(orderHeap).(*model.Order)
-			if order.CustomerID != expectedOrder.CustomerID || order.Price != expectedOrder.Price {
-				t.Errorf("Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d",
-					i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
-			}
+			require.Equal(t, expectedOrder.CustomerID, order.CustomerID, "Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d", i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
+			require.Equal(t, expectedOrder.Price, order.Price, "Order %d: expected CustomerID %d and Price %d, got CustomerID %d and Price %d", i+1, expectedOrder.CustomerID, expectedOrder.Price, order.CustomerID, order.Price)
 		}
 	})
 }
