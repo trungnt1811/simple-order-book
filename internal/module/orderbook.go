@@ -68,12 +68,7 @@ func (ob *OrderBook) CancelOrder(orderID int) error {
 	delete(ob.Orders, orderID)
 
 	// Remove the order from the CustomerOrders map
-	if customerOrders, ok := ob.CustomerOrders[order.CustomerID]; ok {
-		delete(customerOrders, orderID)
-		if len(customerOrders) == 0 {
-			delete(ob.CustomerOrders, order.CustomerID)
-		}
-	}
+	ob.removeOrderFromCustomerOrders(order.CustomerID, orderID)
 
 	log.Printf("Order %d cancelled", orderID)
 	return nil
@@ -183,6 +178,9 @@ func (ob *OrderBook) removeOrder(order *model.Order) {
 
 // Helper function to reinsert skipped orders back into the heap
 func (ob *OrderBook) reinsertSkippedOrders(orders *model.OrderHeap, skippedOrders []*model.Order) {
+	if len(skippedOrders) == 0 {
+		return
+	}
 	for _, skipped := range skippedOrders {
 		heap.Push(orders, skipped)
 	}
