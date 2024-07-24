@@ -105,6 +105,7 @@ func (ob *OrderBook) QueryOrders(customerID int) []*model.Order {
 
 func (ob *OrderBook) matchBuyOrder(order *model.Order) {
 	currentTime := time.Now()
+	skippedOrders := []*model.Order{}
 
 	// Attempt to match the buy order with existing sell orders
 	for ob.SellOrders.Len() > 0 {
@@ -113,7 +114,7 @@ func (ob *OrderBook) matchBuyOrder(order *model.Order) {
 
 		// Skip if the sell order belongs to the same customer
 		if sellOrder.CustomerID == order.CustomerID {
-			heap.Push(ob.SellOrders, sellOrder) // Push it back to the heap
+			skippedOrders = append(skippedOrders, sellOrder) // Temporarily store the order
 			continue
 		}
 
@@ -124,7 +125,11 @@ func (ob *OrderBook) matchBuyOrder(order *model.Order) {
 				// A match is found, execute the trade
 				fmt.Printf("Matched Buy Order %d with Sell Order %d at price %d\n", order.ID, sellOrder.ID, sellOrder.Price)
 				delete(ob.Orders, sellOrder.ID) // Remove the matched sell order
-				return                          // Exit after successful match
+				// Reinsert any skipped orders before returning
+				for _, skipped := range skippedOrders {
+					heap.Push(ob.SellOrders, skipped)
+				}
+				return // Exit after successful match
 			}
 		} else {
 			delete(ob.Orders, sellOrder.ID) // Remove expired sell orders
@@ -133,6 +138,10 @@ func (ob *OrderBook) matchBuyOrder(order *model.Order) {
 
 		// No match found, push the sell order back and exit loop
 		heap.Push(ob.SellOrders, sellOrder)
+		// Reinsert any skipped orders before exiting the loop
+		for _, skipped := range skippedOrders {
+			heap.Push(ob.SellOrders, skipped)
+		}
 		break
 	}
 
@@ -144,6 +153,7 @@ func (ob *OrderBook) matchBuyOrder(order *model.Order) {
 
 func (ob *OrderBook) matchSellOrder(order *model.Order) {
 	currentTime := time.Now()
+	skippedOrders := []*model.Order{}
 
 	// Attempt to match the sell order with existing buy orders
 	for ob.BuyOrders.Len() > 0 {
@@ -152,7 +162,7 @@ func (ob *OrderBook) matchSellOrder(order *model.Order) {
 
 		// Skip if the buy order belongs to the same customer
 		if buyOrder.CustomerID == order.CustomerID {
-			heap.Push(ob.BuyOrders, buyOrder) // Push it back to the heap
+			skippedOrders = append(skippedOrders, buyOrder) // Temporarily store the order
 			continue
 		}
 
@@ -163,7 +173,11 @@ func (ob *OrderBook) matchSellOrder(order *model.Order) {
 				// A match is found, execute the trade
 				fmt.Printf("Matched Sell Order %d with Buy Order %d at price %d\n", order.ID, buyOrder.ID, buyOrder.Price)
 				delete(ob.Orders, buyOrder.ID) // Remove the matched buy order
-				return                         // Exit after successful match
+				// Reinsert any skipped orders before returning
+				for _, skipped := range skippedOrders {
+					heap.Push(ob.BuyOrders, skipped)
+				}
+				return // Exit after successful match
 			}
 		} else {
 			delete(ob.Orders, buyOrder.ID) // Remove expired buy orders
@@ -172,6 +186,10 @@ func (ob *OrderBook) matchSellOrder(order *model.Order) {
 
 		// No match found, push the buy order back and exit loop
 		heap.Push(ob.BuyOrders, buyOrder)
+		// Reinsert any skipped orders before exiting the loop
+		for _, skipped := range skippedOrders {
+			heap.Push(ob.BuyOrders, skipped)
+		}
 		break
 	}
 
