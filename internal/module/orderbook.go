@@ -105,6 +105,13 @@ func (ob *OrderBook) QueryOrders(customerID int) []*model.Order {
 
 func (ob *OrderBook) matchBuyOrder(order *model.Order) {
 	currentTime := time.Now()
+
+	// If the buy order's GTT (Good Til Time) is set and it is before the current time, the order is expired.
+	// Return immediately as expired orders cannot be matched.
+	if order.GTT != nil && order.GTT.Before(currentTime) {
+		return
+	}
+
 	skippedOrders := []*model.Order{}
 
 	// Attempt to match the buy order with existing sell orders
@@ -160,6 +167,13 @@ func (ob *OrderBook) matchBuyOrder(order *model.Order) {
 
 func (ob *OrderBook) matchSellOrder(order *model.Order) {
 	currentTime := time.Now()
+
+	// If the sell order's GTT (Good Til Time) is set and it is before the current time, the order is expired.
+	// Return immediately as expired orders cannot be matched.
+	if order.GTT != nil && order.GTT.Before(currentTime) {
+		return
+	}
+
 	skippedOrders := []*model.Order{}
 
 	// Attempt to match the sell order with existing buy orders
