@@ -331,3 +331,115 @@ func TestOrderBook_CancelOrder(t *testing.T) {
 		require.Equal(t, 1, len(orderBook.CustomerOrders[customerID]), "Unexpected number of orders for customer ID %d", customerID)
 	})
 }
+
+func TestOrderBook_QueryOrders(t *testing.T) {
+	t.Run("Query Orders with Active Orders", func(t *testing.T) {
+		// Create a new order book
+		orderBook := newOrderBookWithLogger()
+
+		customerID := uint(100)
+		orderBook.SubmitOrder(customerID, 120, constant.BuyOrder, createGTT(1))
+		orderBook.SubmitOrder(customerID, 130, constant.BuyOrder, createGTT(2))
+
+		// Query active orders
+		orders := orderBook.QueryOrders(customerID)
+
+		require.Equal(t, 2, len(orders), "Expected 2 active orders for customer ID %d", customerID)
+	})
+
+	t.Run("Query Orders with Expired Orders", func(t *testing.T) {
+		// Create a new order book
+		orderBook := newOrderBookWithLogger()
+
+		customerID := uint(101)
+		expiredGTT := time.Now().Add(-1 * time.Hour)
+		orderBook.SubmitOrder(customerID, 120, constant.BuyOrder, &expiredGTT)
+		orderBook.SubmitOrder(customerID, 130, constant.BuyOrder, &expiredGTT)
+
+		// Query orders
+		orders := orderBook.QueryOrders(customerID)
+
+		require.Equal(t, 0, len(orders), "Expected 0 active order for customer ID %d", customerID)
+	})
+
+	t.Run("Query Orders with No Orders", func(t *testing.T) {
+		// Create a new order book
+		orderBook := newOrderBookWithLogger()
+
+		customerID := uint(102)
+
+		// Query orders
+		orders := orderBook.QueryOrders(customerID)
+
+		require.Equal(t, 0, len(orders), "Expected 0 orders for customer ID %d", customerID)
+	})
+
+	t.Run("Query Orders with Both Active and Expired Orders", func(t *testing.T) {
+		// Create a new order book
+		orderBook := newOrderBookWithLogger()
+
+		customerID := uint(103)
+		expiredGTT := time.Now().Add(-1 * time.Hour)
+		orderBook.SubmitOrder(customerID, 140, constant.BuyOrder, &expiredGTT)
+		activeOrderID := orderBook.NextOrderID
+		orderBook.SubmitOrder(customerID, 150, constant.BuyOrder, createGTT(1))
+
+		// Query orders
+		orders := orderBook.QueryOrders(customerID)
+
+		require.Equal(t, 1, len(orders), "Expected 1 active order for customer ID %d", customerID)
+		require.Equal(t, activeOrderID, orders[0].ID, "Expected order with ID %d", activeOrderID)
+	})
+
+	t.Run("Query Orders After Canceling an Order", func(t *testing.T) {
+		// Create a new order book
+		orderBook := newOrderBookWithLogger()
+
+		customerID := uint(104)
+		orderID := orderBook.NextOrderID
+		orderBook.SubmitOrder(customerID, 150, constant.BuyOrder, createGTT(1))
+		orderBook.CancelOrder(orderID)
+
+		// Query orders
+		orders := orderBook.QueryOrders(customerID)
+
+		require.Equal(t, 0, len(orders), "Expected 0 orders for customer ID %d after cancellation", customerID)
+	})
+
+	t.Run("Query Orders After Canceling All Orders", func(t *testing.T) {
+		// Create a new order book
+		orderBook := newOrderBookWithLogger()
+
+		customerID := uint(105)
+		orderID1 := orderBook.NextOrderID
+		orderBook.SubmitOrder(customerID, 160, constant.BuyOrder, createGTT(1))
+		orderID2 := orderBook.NextOrderID
+		orderBook.SubmitOrder(customerID, 170, constant.BuyOrder, createGTT(2))
+		orderBook.CancelOrder(orderID1)
+		orderBook.CancelOrder(orderID2)
+
+		// Query orders
+		orders := orderBook.QueryOrders(customerID)
+
+		require.Equal(t, 0, len(orders), "Expected 0 orders for customer ID %d after canceling all orders", customerID)
+	})
+
+	t.Run("Query Orders with Cancelled Orders but Active Orders Present", func(t *testing.T) {
+		// Create a new order book
+		orderBook := newOrderBookWithLogger()
+
+		customerID := uint(106)
+		expiredGTT := time.Now().Add(-1 * time.Hour)
+		orderID1 := orderBook.NextOrderID
+		orderBook.SubmitOrder(customerID, 180, constant.BuyOrder, &expiredGTT)
+		orderID2 := orderBook.NextOrderID
+		orderBook.SubmitOrder(customerID, 190, constant.BuyOrder, createGTT(1))
+		orderBook.CancelOrder(orderID1)
+
+		// Query orders
+		orders := orderBook.QueryOrders(customerID)
+
+		require.Equal(t, 1, len(orders), "Expected 1 active order for customer ID %d", customerID)
+		require.Equal(t, orderID2, orders[0].ID, "Expected order with ID %d", orderID2)
+	})
+}
