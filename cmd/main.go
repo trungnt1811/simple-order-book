@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/trungnt1811/simple-order-book/internal/constant"
 	"github.com/trungnt1811/simple-order-book/internal/module"
 )
 
@@ -10,10 +11,10 @@ func main() {
 	ob := module.NewOrderBook()
 
 	// Example usage
-	ob.SubmitOrder(1, 100, true, nil)  // Customer 1 offers to buy at $100
-	ob.SubmitOrder(2, 99, true, nil)   // Customer 2 offers to buy at $99
-	ob.SubmitOrder(3, 110, false, nil) // Customer 3 offers to sell at $110
-	ob.SubmitOrder(4, 105, false, nil) // Customer 4 offers to sell at $105
+	ob.SubmitOrder(1, 100, constant.BuyOrder, nil)  // Customer 1 offers to buy at $100
+	ob.SubmitOrder(2, 99, constant.BuyOrder, nil)   // Customer 2 offers to buy at $99
+	ob.SubmitOrder(3, 110, constant.SellOrder, nil) // Customer 3 offers to sell at $110
+	ob.SubmitOrder(4, 105, constant.SellOrder, nil) // Customer 4 offers to sell at $105
 
 	// Example query
 	orders := ob.QueryOrders(1)

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/trungnt1811/simple-order-book/internal/constant"
 	"github.com/trungnt1811/simple-order-book/internal/model"
 )
 
@@ -13,8 +14,8 @@ import (
 type OrderBook struct {
 	BuyOrders      *model.OrderHeap
 	SellOrders     *model.OrderHeap
-	Orders         map[int]*model.Order   // All orders by ID
-	CustomerOrders map[int][]*model.Order // Orders by customer ID
+	Orders         map[int]*model.Order         // All orders by ID
+	CustomerOrders map[int]map[int]*model.Order // Orders by customer ID and order ID
 	NextOrderID    int
 	mu             sync.Mutex
 }
@@ -22,16 +23,16 @@ type OrderBook struct {
 // NewOrderBook creates a new OrderBook.
 func NewOrderBook() *OrderBook {
 	return &OrderBook{
-		BuyOrders:      &model.OrderHeap{Desc: true},
-		SellOrders:     &model.OrderHeap{Desc: false},
+		BuyOrders:      &model.OrderHeap{Type: constant.BuyOrder},
+		SellOrders:     &model.OrderHeap{Type: constant.SellOrder},
 		Orders:         make(map[int]*model.Order),
-		CustomerOrders: make(map[int][]*model.Order),
+		CustomerOrders: make(map[int]map[int]*model.Order),
 		NextOrderID:    1,
 	}
 }
 
 // SubmitOrder submits a new buy or sell order.
-func (ob *OrderBook) SubmitOrder(customerID int, price int, isBuy bool, gtt *time.Time) {
+func (ob *OrderBook) SubmitOrder(customerID int, price int, orderType constant.OrderType, gtt *time.Time) {
 	ob.mu.Lock()
 	defer ob.mu.Unlock()
 
@@ -47,7 +48,7 @@ func (ob *OrderBook) SubmitOrder(customerID int, price int, isBuy bool, gtt *tim
 	ob.NextOrderID++
 
 	// Try to match the order
-	if isBuy {
+	if orderType == constant.BuyOrder {
 		ob.matchBuyOrder(order)
 	} else {
 		ob.matchSellOrder(order)
@@ -69,13 +70,11 @@ func (ob *OrderBook) CancelOrder(orderID int) {
 	// Remove the order from the main order book
 	delete(ob.Orders, orderID)
 
-	// Remove the order from the customer's list of orders
-	customerOrders := ob.CustomerOrders[order.CustomerID]
-	for i, o := range customerOrders {
-		if o.ID == orderID {
-			// Remove the order from the slice of the customer's orders
-			ob.CustomerOrders[order.CustomerID] = append(customerOrders[:i], customerOrders[i+1:]...)
-			break
+	// Remove the order from the CustomerOrders map
+	if customerOrders, ok := ob.CustomerOrders[order.CustomerID]; ok {
+		delete(customerOrders, orderID)
+		if len(customerOrders) == 0 {
+			delete(ob.CustomerOrders, order.CustomerID)
 		}
 	}
 
@@ -87,16 +86,15 @@ func (ob *OrderBook) QueryOrders(customerID int) []*model.Order {
 	ob.mu.Lock()         // Lock the order book to prevent concurrent modifications
 	defer ob.mu.Unlock() // Ensure the lock is released after the function completes
 
-	// Retrieve the orders for the given customer ID
-	customerOrders := ob.CustomerOrders[customerID]
 	activeOrders := []*model.Order{}
 	currentTime := time.Now()
 
 	// Filter and collect only the active orders
-	for _, order := range customerOrders {
-		// Check if the order is still active based on its GTT (Good Til Time)
-		if order.GTT == nil || order.GTT.After(currentTime) {
-			activeOrders = append(activeOrders, order)
+	if customerOrders, ok := ob.CustomerOrders[customerID]; ok {
+		for _, order := range customerOrders {
+			if order.GTT == nil || order.GTT.After(currentTime) {
+				activeOrders = append(activeOrders, order)
+			}
 		}
 	}
 
@@ -168,7 +166,12 @@ func (ob *OrderBook) matchBuyOrder(order *model.Order) {
 	// No match found, add the buy order to the list of active buy orders
 	heap.Push(ob.BuyOrders, order)
 	ob.Orders[order.ID] = order
-	ob.CustomerOrders[order.CustomerID] = append(ob.CustomerOrders[order.CustomerID], order)
+
+	// Add the buy order to the CustomerOrders map
+	if ob.CustomerOrders[order.CustomerID] == nil {
+		ob.CustomerOrders[order.CustomerID] = make(map[int]*model.Order)
+	}
+	ob.CustomerOrders[order.CustomerID][order.ID] = order
 }
 
 func (ob *OrderBook) matchSellOrder(order *model.Order) {
@@ -236,17 +239,20 @@ func (ob *OrderBook) matchSellOrder(order *model.Order) {
 	// No match found, add the sell order to the list of active sell orders
 	heap.Push(ob.SellOrders, order)
 	ob.Orders[order.ID] = order
-	ob.CustomerOrders[order.CustomerID] = append(ob.CustomerOrders[order.CustomerID], order)
+
+	// Add the sell order to the CustomerOrders map
+	if ob.CustomerOrders[order.CustomerID] == nil {
+		ob.CustomerOrders[order.CustomerID] = make(map[int]*model.Order)
+	}
+	ob.CustomerOrders[order.CustomerID][order.ID] = order
 }
 
 // Helper function to remove an order from the CustomerOrders map
 func (ob *OrderBook) removeOrderFromCustomerOrders(customerID, orderID int) {
-	customerOrders := ob.CustomerOrders[customerID]
-	for i, o := range customerOrders {
-		if o.ID == orderID {
-			// Remove the order from the slice of the customer's orders
-			ob.CustomerOrders[customerID] = append(customerOrders[:i], customerOrders[i+1:]...)
-			break
+	if customerOrders, ok := ob.CustomerOrders[customerID]; ok {
+		delete(customerOrders, orderID)
+		if len(customerOrders) == 0 {
+			delete(ob.CustomerOrders, customerID)
 		}
 	}
 }

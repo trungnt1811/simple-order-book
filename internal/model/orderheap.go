@@ -1,9 +1,11 @@
 package model
 
+import "github.com/trungnt1811/simple-order-book/internal/constant"
+
 // OrderHeap is a priority queue for orders, implemented as a container/heap.
 type OrderHeap struct {
 	Orders []*Order
-	Desc   bool // Desc: true for max heap (buy orders), false for min heap (sell orders)
+	Type   constant.OrderType // Max heap for buy order, min heap for sell order
 }
 
 // Len returns the number of orders in the heap.
@@ -16,7 +18,7 @@ func (h OrderHeap) Less(i, j int) bool {
 	if h.Orders[i].Price == h.Orders[j].Price {
 		return h.Orders[i].Timestamp.Before(h.Orders[j].Timestamp)
 	}
-	if h.Desc {
+	if h.Type == constant.BuyOrder {
 		return h.Orders[i].Price > h.Orders[j].Price
 	}
 	return h.Orders[i].Price < h.Orders[j].Price

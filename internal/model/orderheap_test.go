@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/trungnt1811/simple-order-book/internal/constant"
 	"github.com/trungnt1811/simple-order-book/internal/model"
 )
 
@@ -18,13 +19,13 @@ type expectedOrder struct {
 func TestOrderHeap(t *testing.T) {
 	testCases := []struct {
 		name           string
-		desc           bool
+		orderType      constant.OrderType
 		orders         []*model.Order
 		expectedOrders []expectedOrder
 	}{
 		{
-			name: "Ascending order test (sell orders)",
-			desc: false,
+			name:      "Sell orders test",
+			orderType: constant.SellOrder,
 			orders: []*model.Order{
 				{CustomerID: 1, Price: 100},
 				{CustomerID: 2, Price: 99},
@@ -39,8 +40,8 @@ func TestOrderHeap(t *testing.T) {
 			},
 		},
 		{
-			name: "Descending order test (buy orders)",
-			desc: true,
+			name:      "Buy orders test",
+			orderType: constant.BuyOrder,
 			orders: []*model.Order{
 				{CustomerID: 1, Price: 100},
 				{CustomerID: 2, Price: 99},
@@ -56,13 +57,13 @@ func TestOrderHeap(t *testing.T) {
 		},
 		{
 			name:           "Empty heap test",
-			desc:           true,
+			orderType:      constant.BuyOrder,
 			orders:         []*model.Order{},
 			expectedOrders: []expectedOrder{},
 		},
 		{
-			name: "Duplicate prices with various timestamps test (sell orders)",
-			desc: false,
+			name:      "Duplicate prices with various timestamps test (sell orders)",
+			orderType: constant.SellOrder,
 			orders: []*model.Order{
 				{CustomerID: 1, Price: 100, Timestamp: time.Now()},
 				{CustomerID: 2, Price: 100, Timestamp: time.Now().Add(1 * time.Second)},
@@ -81,8 +82,8 @@ func TestOrderHeap(t *testing.T) {
 			},
 		},
 		{
-			name: "Duplicate prices with various timestamps test (buy orders)",
-			desc: true,
+			name:      "Duplicate prices with various timestamps test (buy orders)",
+			orderType: constant.BuyOrder,
 			orders: []*model.Order{
 				{CustomerID: 1, Price: 100, Timestamp: time.Now()},
 				{CustomerID: 2, Price: 100, Timestamp: time.Now().Add(1 * time.Second)},
@@ -104,7 +105,7 @@ func TestOrderHeap(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			orderHeap := &model.OrderHeap{Desc: tc.desc}
+			orderHeap := &model.OrderHeap{Type: tc.orderType}
 			for _, order := range tc.orders {
 				heap.Push(orderHeap, order)
 			}
@@ -121,7 +122,7 @@ func TestOrderHeap(t *testing.T) {
 // TestOrderHeapPopAndPush tests the OrderHeap implementation for popping and pushing orders.
 func TestOrderHeap_PopAndPush(t *testing.T) {
 	t.Run("Push to empty heap", func(t *testing.T) {
-		orderHeap := &model.OrderHeap{Desc: false}
+		orderHeap := &model.OrderHeap{Type: constant.SellOrder}
 		order := &model.Order{
 			CustomerID: 1,
 			Price:      100,
@@ -137,7 +138,7 @@ func TestOrderHeap_PopAndPush(t *testing.T) {
 	})
 
 	t.Run("Push to non-empty heap (sell orders)", func(t *testing.T) {
-		orderHeap := &model.OrderHeap{Desc: false}
+		orderHeap := &model.OrderHeap{Type: constant.SellOrder}
 		orders := []*model.Order{
 			{CustomerID: 1, Price: 100, Timestamp: time.Now()},
 			{CustomerID: 2, Price: 99, Timestamp: time.Now()},
@@ -166,7 +167,7 @@ func TestOrderHeap_PopAndPush(t *testing.T) {
 	})
 
 	t.Run("Push to non-empty heap (buy orders)", func(t *testing.T) {
-		orderHeap := &model.OrderHeap{Desc: true}
+		orderHeap := &model.OrderHeap{Type: constant.BuyOrder}
 		orders := []*model.Order{
 			{CustomerID: 1, Price: 100, Timestamp: time.Now()},
 			{CustomerID: 2, Price: 99, Timestamp: time.Now()},
@@ -195,7 +196,7 @@ func TestOrderHeap_PopAndPush(t *testing.T) {
 	})
 
 	t.Run("Pop from heap and push new order (sell orders)", func(t *testing.T) {
-		orderHeap := &model.OrderHeap{Desc: false}
+		orderHeap := &model.OrderHeap{Type: constant.SellOrder}
 		orders := []*model.Order{
 			{CustomerID: 1, Price: 100, Timestamp: time.Now()},
 			{CustomerID: 2, Price: 99, Timestamp: time.Now()},
@@ -224,7 +225,7 @@ func TestOrderHeap_PopAndPush(t *testing.T) {
 	})
 
 	t.Run("Pop from heap and push new order (buy orders)", func(t *testing.T) {
-		orderHeap := &model.OrderHeap{Desc: true}
+		orderHeap := &model.OrderHeap{Type: constant.BuyOrder}
 		orders := []*model.Order{
 			{CustomerID: 1, Price: 100, Timestamp: time.Now()},
 			{CustomerID: 2, Price: 99, Timestamp: time.Now()},
@@ -253,7 +254,7 @@ func TestOrderHeap_PopAndPush(t *testing.T) {
 	})
 
 	t.Run("Pop from heap and push order that was recently popped (sell orders)", func(t *testing.T) {
-		orderHeap := &model.OrderHeap{Desc: false}
+		orderHeap := &model.OrderHeap{Type: constant.SellOrder}
 		orders := []*model.Order{
 			{CustomerID: 1, Price: 100, Timestamp: time.Now()},
 			{CustomerID: 2, Price: 99, Timestamp: time.Now()},
@@ -277,7 +278,7 @@ func TestOrderHeap_PopAndPush(t *testing.T) {
 	})
 
 	t.Run("Pop from heap and push order that was recently popped (buy orders)", func(t *testing.T) {
-		orderHeap := &model.OrderHeap{Desc: true}
+		orderHeap := &model.OrderHeap{Type: constant.BuyOrder}
 		orders := []*model.Order{
 			{CustomerID: 1, Price: 100, Timestamp: time.Now()},
 			{CustomerID: 2, Price: 99, Timestamp: time.Now()},
