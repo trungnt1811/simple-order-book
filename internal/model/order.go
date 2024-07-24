@@ -3,8 +3,8 @@ package model
 import "time"
 
 type Order struct {
-	ID         int
-	CustomerID int
+	ID         uint64
+	CustomerID uint
 	Price      int
 	Timestamp  time.Time
 	GTT        *time.Time // Good Til Time

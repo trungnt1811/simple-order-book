@@ -15,9 +15,9 @@ import (
 type OrderBook struct {
 	BuyOrders      *model.OrderHeap
 	SellOrders     *model.OrderHeap
-	Orders         map[int]*model.Order         // All orders by ID
-	CustomerOrders map[int]map[int]*model.Order // Orders by customer ID and order ID
-	NextOrderID    int
+	Orders         map[uint64]*model.Order          // All orders by ID
+	CustomerOrders map[uint]map[uint64]*model.Order // Orders by customer ID and order ID
+	NextOrderID    uint64
 	mtx            sync.RWMutex
 }
 
@@ -26,16 +26,27 @@ func NewOrderBook() *OrderBook {
 	return &OrderBook{
 		BuyOrders:      &model.OrderHeap{Type: constant.BuyOrder},
 		SellOrders:     &model.OrderHeap{Type: constant.SellOrder},
-		Orders:         make(map[int]*model.Order),
-		CustomerOrders: make(map[int]map[int]*model.Order),
+		Orders:         make(map[uint64]*model.Order),
+		CustomerOrders: make(map[uint]map[uint64]*model.Order),
 		NextOrderID:    1,
 	}
 }
 
 // SubmitOrder submits a new buy or sell order.
-func (ob *OrderBook) SubmitOrder(customerID int, price int, orderType constant.OrderType, gtt *time.Time) {
+func (ob *OrderBook) SubmitOrder(customerID uint, price int, orderType constant.OrderType, gtt *time.Time) error {
 	ob.mtx.Lock()
 	defer ob.mtx.Unlock()
+
+	// Validate inputs
+	if price < 0 {
+		return fmt.Errorf("price cannot be negative")
+	}
+	if customerID <= 0 {
+		return fmt.Errorf("invalid customer ID")
+	}
+	if orderType != constant.BuyOrder && orderType != constant.SellOrder {
+		return fmt.Errorf("invalid order type")
+	}
 
 	// Create a new order
 	order := &model.Order{
@@ -50,10 +61,11 @@ func (ob *OrderBook) SubmitOrder(customerID int, price int, orderType constant.O
 
 	// Try to match the order
 	ob.matchOrder(order, orderType)
+	return nil
 }
 
 // CancelOrder cancels an existing order by ID.
-func (ob *OrderBook) CancelOrder(orderID int) error {
+func (ob *OrderBook) CancelOrder(orderID uint64) error {
 	ob.mtx.Lock()
 	defer ob.mtx.Unlock()
 
@@ -75,7 +87,7 @@ func (ob *OrderBook) CancelOrder(orderID int) error {
 }
 
 // QueryOrders returns all active orders for a given customer ID.
-func (ob *OrderBook) QueryOrders(customerID int) []*model.Order {
+func (ob *OrderBook) QueryOrders(customerID uint) []*model.Order {
 	ob.mtx.RLock()
 	defer ob.mtx.RUnlock()
 
@@ -165,7 +177,7 @@ func (ob *OrderBook) matchOrder(order *model.Order, orderType constant.OrderType
 
 	// Add the order to the CustomerOrders map
 	if ob.CustomerOrders[order.CustomerID] == nil {
-		ob.CustomerOrders[order.CustomerID] = make(map[int]*model.Order)
+		ob.CustomerOrders[order.CustomerID] = make(map[uint64]*model.Order)
 	}
 	ob.CustomerOrders[order.CustomerID][order.ID] = order
 }
@@ -187,7 +199,7 @@ func (ob *OrderBook) reinsertSkippedOrders(orders *model.OrderHeap, skippedOrder
 }
 
 // Helper function to remove an order from the CustomerOrders map
-func (ob *OrderBook) removeOrderFromCustomerOrders(customerID, orderID int) {
+func (ob *OrderBook) removeOrderFromCustomerOrders(customerID uint, orderID uint64) {
 	if customerOrders, ok := ob.CustomerOrders[customerID]; ok {
 		delete(customerOrders, orderID)
 		if len(customerOrders) == 0 {

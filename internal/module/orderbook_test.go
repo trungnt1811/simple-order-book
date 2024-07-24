@@ -22,7 +22,7 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		// Create a new order book
 		orderBook := module.NewOrderBook()
 
-		customerID := 18
+		customerID := uint(18)
 		orderID := orderBook.NextOrderID
 		orderBook.SubmitOrder(customerID, 100, constant.BuyOrder, createGTT(1))
 
@@ -41,7 +41,7 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		// Create a new order book
 		orderBook := module.NewOrderBook()
 
-		customerID := 11
+		customerID := uint(11)
 		orderID := orderBook.NextOrderID
 		orderBook.SubmitOrder(customerID, 90, constant.SellOrder, createGTT(1))
 
@@ -61,12 +61,12 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		orderBook := module.NewOrderBook()
 
 		// Prepare sell order
-		sellCustomerID := 1995
+		sellCustomerID := uint(1995)
 		sellOrderID := orderBook.NextOrderID
 		orderBook.SubmitOrder(sellCustomerID, 90, constant.SellOrder, createGTT(1))
 
 		// Prepare buy order should match
-		buyCustomerID := 4953
+		buyCustomerID := uint(4953)
 		buyOrderID := orderBook.NextOrderID
 		orderBook.SubmitOrder(buyCustomerID, 90, constant.BuyOrder, createGTT(1))
 
@@ -94,7 +94,7 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		orderBook := module.NewOrderBook()
 
 		orderID := orderBook.NextOrderID
-		customerID := 911
+		customerID := uint(911)
 		orderBook.SubmitOrder(customerID, 110, constant.BuyOrder, nil)
 
 		// Check if the order is added to the BuyOrders heap
@@ -112,7 +112,7 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		// Create a new order book
 		orderBook := module.NewOrderBook()
 
-		customerID := 9947
+		customerID := uint(9947)
 		orderBook.SubmitOrder(customerID, 120, constant.SellOrder, createGTT(2))
 		orderBook.SubmitOrder(customerID, 130, constant.SellOrder, createGTT(3))
 
@@ -129,7 +129,7 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 
 		expiredGTT := time.Now().Add(-1 * time.Hour)
 		orderID := orderBook.NextOrderID
-		customerID := 18111995
+		customerID := uint(18111995)
 		orderBook.SubmitOrder(customerID, 95, constant.SellOrder, &expiredGTT)
 
 		// Check if the order is not added to the SellOrders heap
@@ -147,7 +147,7 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		// Create a new order book
 		orderBook := module.NewOrderBook()
 
-		customerID := 69
+		customerID := uint(69)
 		orderID1 := orderBook.NextOrderID
 		orderBook.SubmitOrder(customerID, 100, constant.BuyOrder, createGTT(1))
 
@@ -173,13 +173,13 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		orderBook := module.NewOrderBook()
 
 		// Submit and then cancel a buy order
-		buyCustomerID := 3456
+		buyCustomerID := uint(3456)
 		buyOrderID := orderBook.NextOrderID
 		orderBook.SubmitOrder(buyCustomerID, 95, constant.BuyOrder, createGTT(1))
 		orderBook.CancelOrder(buyOrderID)
 
 		// Submit a sell order with matching price
-		sellCustomerID := 7890
+		sellCustomerID := uint(7890)
 		sellOrderID := orderBook.NextOrderID
 		orderBook.SubmitOrder(sellCustomerID, 95, constant.SellOrder, createGTT(1))
 
@@ -211,7 +211,7 @@ func TestOrderBook_CancelOrder(t *testing.T) {
 		orderID := orderBook.NextOrderID
 
 		// Submit initial order
-		customerID := 123
+		customerID := uint(123)
 		orderBook.SubmitOrder(customerID, 100, constant.BuyOrder, createGTT(1))
 
 		// Check if the order is added to the Orders map
@@ -239,7 +239,7 @@ func TestOrderBook_CancelOrder(t *testing.T) {
 		orderID := orderBook.NextOrderID
 
 		// Submit initial order
-		customerID := 456
+		customerID := uint(456)
 		orderBook.SubmitOrder(customerID, 100, constant.BuyOrder, createGTT(1))
 
 		// Check if the order is added to the Orders map
@@ -267,7 +267,7 @@ func TestOrderBook_CancelOrder(t *testing.T) {
 		orderBook := module.NewOrderBook()
 
 		// Submit initial orders
-		customerID := 789
+		customerID := uint(789)
 		orderID1 := orderBook.NextOrderID
 		orderBook.SubmitOrder(customerID, 150, constant.BuyOrder, createGTT(1))
 		orderID2 := orderBook.NextOrderID
