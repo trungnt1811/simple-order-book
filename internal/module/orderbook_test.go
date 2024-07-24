@@ -16,7 +16,6 @@ func createGTT(hours int) *time.Time {
 
 // TestSubmitOrder tests the SubmitOrder function.
 func TestOrderBook_SubmitOrder(t *testing.T) {
-	// Test case 1: Submit a buy order
 	t.Run("Submit Buy Order", func(t *testing.T) {
 		// Create a new order book
 		orderBook := module.NewOrderBook()
@@ -36,7 +35,6 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		require.Equal(t, 1, len(orderBook.CustomerOrders[customerID]), "Expected 1 order for customer ID %d", customerID)
 	})
 
-	// Test case 2: Submit a sell order
 	t.Run("Submit Sell Order", func(t *testing.T) {
 		// Create a new order book
 		orderBook := module.NewOrderBook()
@@ -56,7 +54,6 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		require.Equal(t, 1, len(orderBook.CustomerOrders[customerID]), "Expected 1 order for customer ID %d", customerID)
 	})
 
-	// Test case 3: Submit a buy order that matches an existing sell order
 	t.Run("Match Buy Order", func(t *testing.T) {
 		// Create a new order book
 		orderBook := module.NewOrderBook()
@@ -90,7 +87,6 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		require.Equal(t, 0, len(orderBook.CustomerOrders[buyCustomerID]), "Expected 0 order for customer ID %d", buyCustomerID)
 	})
 
-	// Test case 4: Submit an order with a nil GTT
 	t.Run("Submit Order with Nil GTT", func(t *testing.T) {
 		// Create a new order book
 		orderBook := module.NewOrderBook()
@@ -110,7 +106,6 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		require.Equal(t, 1, len(orderBook.CustomerOrders[customerID]), "Expected 1 order for customer ID %d", customerID)
 	})
 
-	// Test case 5: Submit multiple orders from the same customer
 	t.Run("Submit Multiple Orders from Same Customer", func(t *testing.T) {
 		// Create a new order book
 		orderBook := module.NewOrderBook()
@@ -126,7 +121,6 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		require.Equal(t, 2, len(orderBook.CustomerOrders[customerID]), "Expected 2 orders for customer ID %d", customerID)
 	})
 
-	// Test case 6: Submit an order with an expired GTT
 	t.Run("Submit Order with Expired GTT", func(t *testing.T) {
 		// Create a new order book
 		orderBook := module.NewOrderBook()
@@ -147,7 +141,6 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		require.Equal(t, 0, len(orderBook.CustomerOrders[customerID]), "Expected 0 orders for customer ID %d", customerID)
 	})
 
-	// Test case 9: Submit Orders from Same Customer with Same Prices but Different Timestamp
 	t.Run("Submit Orders from Same Customer with Same Prices but Different Timestamp", func(t *testing.T) {
 		// Create a new order book
 		orderBook := module.NewOrderBook()
@@ -175,7 +168,6 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 }
 
 func TestOrderBook_CancelOrder(t *testing.T) {
-	// Test case 1: Cancel an existing order
 	t.Run("Cancel existing order", func(t *testing.T) {
 		// Create a new order book
 		orderBook := module.NewOrderBook()

@@ -119,6 +119,12 @@ func (ob *OrderBook) matchBuyOrder(order *model.Order) {
 		// Retrieve the lowest sell order
 		sellOrder := heap.Pop(ob.SellOrders).(*model.Order)
 
+		// Skip if the sell order is not present in the Orders map
+		_, exists := ob.Orders[sellOrder.ID]
+		if !exists {
+			continue
+		}
+
 		// Skip if the sell order belongs to the same customer
 		if sellOrder.CustomerID == order.CustomerID {
 			skippedOrders = append(skippedOrders, sellOrder) // Temporarily store the order
@@ -180,6 +186,12 @@ func (ob *OrderBook) matchSellOrder(order *model.Order) {
 	for ob.BuyOrders.Len() > 0 {
 		// Retrieve the highest buy order
 		buyOrder := heap.Pop(ob.BuyOrders).(*model.Order)
+
+		// Skip if the buy order is not present in the Orders map
+		_, exists := ob.Orders[buyOrder.ID]
+		if !exists {
+			continue
+		}
 
 		// Skip if the buy order belongs to the same customer
 		if buyOrder.CustomerID == order.CustomerID {
