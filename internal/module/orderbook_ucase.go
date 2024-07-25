@@ -65,12 +65,16 @@ func (ob *orderBook) SubmitOrder(customerID uint, price uint, orderType constant
 
 	// Validate inputs
 	if orderType != constant.BuyOrder && orderType != constant.SellOrder {
-		return fmt.Errorf("invalid order type")
+		err := fmt.Errorf("invalid order type")
+		ob.logger.Error("Invalid order type", zap.Error(err))
+		return err
 	}
 
 	// Validate price
 	if price == 0 {
-		return fmt.Errorf("invalid price")
+		err := fmt.Errorf("invalid price")
+		ob.logger.Error("Invalid price", zap.Error(err))
+		return err
 	}
 
 	// Create a new order
@@ -175,7 +179,7 @@ func (ob *orderBook) matchOrder(order *model.Order, orderType constant.OrderType
 				// A match is found, execute the trade
 				ob.logger.Info("Matched orders",
 					zap.Uint64("orderID", order.ID),
-					zap.Bool("orderType", bool(order.OrderType)),
+					zap.String("orderType", order.OrderType.String()),
 					zap.Uint64("oppositeOrderID", oppositeOrder.ID),
 					zap.Uint("price", oppositeOrder.Price),
 				)
