@@ -13,7 +13,7 @@ import (
 	"github.com/trungnt1811/simple-order-book/internal/model"
 )
 
-// TODO: Consider implementing a more efficient locking mechanism,
+// TODO: Consider implementing a fine-grained locking mechanism and a background process for order expiration,
 // however this may require additional time to implement, I think so :D
 
 // orderBook manages buy and sell orders.
