@@ -16,7 +16,7 @@ import (
 // TODO: Consider implementing a more efficient locking mechanism,
 // however this may require additional time to implement, I think so :D
 
-// OrderBook manages buy and sell orders.
+// orderBook manages buy and sell orders.
 type orderBook struct {
 	BuyOrders      *model.OrderHeap
 	SellOrders     *model.OrderHeap
@@ -27,7 +27,7 @@ type orderBook struct {
 	logger         *zap.Logger
 }
 
-// NewOrderBook creates a new OrderBook.
+// NewOrderBookUCase creates a new order book ucase.
 func NewOrderBookUCase(logger *zap.Logger) interfaces.OrderBookUCase {
 	return &orderBook{
 		BuyOrders:      &model.OrderHeap{Type: constant.BuyOrder},
@@ -39,26 +39,37 @@ func NewOrderBookUCase(logger *zap.Logger) interfaces.OrderBookUCase {
 	}
 }
 
+// GetNextOrderID returns the next available order ID.
+// This ID is incremented with each new order submission.
 func (ob *orderBook) GetNextOrderID() uint64 {
 	return ob.NextOrderID
 }
 
+// GetSellOrders returns a heap of all sell orders.
+// The heap structure allows efficient retrieval of the highest priority sell orders.
 func (ob *orderBook) GetSellOrders() model.OrderHeap {
 	return *ob.SellOrders
 }
 
+// GetBuyOrders returns a heap of all buy orders.
+// The heap structure allows efficient retrieval of the highest priority buy orders.
 func (ob *orderBook) GetBuyOrders() model.OrderHeap {
 	return *ob.BuyOrders
 }
 
+// GetOrders returns a map of all orders.
+// The map key is the order ID and the value is a pointer to the Order struct.
 func (ob *orderBook) GetOrders() map[uint64]*model.Order {
 	return ob.Orders
 }
 
+// GetCustomerOrders returns a map of customer orders.
+// The outer map key is the customer ID, and the inner map key is the order ID with the value being a pointer to the Order struct.
 func (ob *orderBook) GetCustomerOrders() map[uint]map[uint64]*model.Order {
 	return ob.CustomerOrders
 }
 
+// SubmitOrder submit an order.
 func (ob *orderBook) SubmitOrder(customerID uint, price uint, orderType constant.OrderType, gtt *time.Time) error {
 	ob.mtx.Lock()
 	defer ob.mtx.Unlock()
@@ -130,7 +141,8 @@ func (ob *orderBook) QueryOrders(customerID uint) []*model.Order {
 		}
 	}
 
-	return activeOrders // Return the list of active orders for the customer
+	// Return the list of active orders for the customer
+	return activeOrders
 }
 
 // matchOrder attempts to match a new order with existing orders
@@ -167,7 +179,8 @@ func (ob *orderBook) matchOrder(order *model.Order, orderType constant.OrderType
 
 		// Skip if the opposite order belongs to the same customer
 		if oppositeOrder.CustomerID == order.CustomerID {
-			skippedOrders = append(skippedOrders, oppositeOrder) // Temporarily store the order
+			// Temporarily store the order
+			skippedOrders = append(skippedOrders, oppositeOrder)
 			continue
 		}
 
@@ -177,7 +190,7 @@ func (ob *orderBook) matchOrder(order *model.Order, orderType constant.OrderType
 			if (orderType == constant.BuyOrder && oppositeOrder.Price <= order.Price) ||
 				(orderType == constant.SellOrder && oppositeOrder.Price >= order.Price) {
 				// A match is found, execute the trade
-				ob.logger.Info("Matched orders",
+				ob.logger.Info("MATCHED ORDERS!!!",
 					zap.Uint64("orderID", order.ID),
 					zap.String("orderType", order.OrderType.String()),
 					zap.Uint64("oppositeOrderID", oppositeOrder.ID),
