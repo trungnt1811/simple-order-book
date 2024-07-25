@@ -56,6 +56,7 @@ func (ob *OrderBook) SubmitOrder(customerID uint, price uint, orderType constant
 		Price:      price,
 		Timestamp:  time.Now(),
 		GTT:        gtt,
+		OrderType:  orderType,
 	}
 
 	ob.NextOrderID++
