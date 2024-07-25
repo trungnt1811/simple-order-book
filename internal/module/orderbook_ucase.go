@@ -13,6 +13,9 @@ import (
 	"github.com/trungnt1811/simple-order-book/internal/model"
 )
 
+// TODO: Consider implementing a more efficient locking mechanism,
+// however this may require additional time to implement, I think so :D
+
 // OrderBook manages buy and sell orders.
 type orderBook struct {
 	BuyOrders      *model.OrderHeap
