@@ -3,14 +3,17 @@ package main
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/trungnt1811/simple-order-book/internal/constant"
+	"github.com/trungnt1811/simple-order-book/internal/module"
 	"github.com/trungnt1811/simple-order-book/internal/util"
 )
 
 func main() {
-	ob := util.NewOrderBookWithLogger()
+	logger := util.SetupLogger()
+	defer logger.Sync() // Flushes buffer, if any
+
+	orderBook := module.NewOrderBook(logger)
 
 	var wg sync.WaitGroup
 
@@ -18,7 +21,7 @@ func main() {
 	submitOrders := func(customerID uint, prices []uint, orderType constant.OrderType, wg *sync.WaitGroup) {
 		defer wg.Done()
 		for _, price := range prices {
-			ob.SubmitOrder(customerID, price, orderType, createGTT(1))
+			orderBook.SubmitOrder(customerID, price, orderType, util.CreateGTT(1))
 		}
 	}
 
@@ -26,7 +29,7 @@ func main() {
 	cancelOrders := func(orderIDs []uint64, wg *sync.WaitGroup) {
 		defer wg.Done()
 		for _, orderID := range orderIDs {
-			err := ob.CancelOrder(orderID)
+			err := orderBook.CancelOrder(orderID)
 			if err != nil {
 				fmt.Printf("Failed to cancel order %d: %v\n", orderID, err)
 			}
@@ -44,7 +47,7 @@ func main() {
 
 	// Query orders
 	queryOrders := func(customerID uint) {
-		orders := ob.QueryOrders(customerID)
+		orders := orderBook.QueryOrders(customerID)
 		fmt.Printf("Customer %d's active orders:\n", customerID)
 		for _, order := range orders {
 			fmt.Printf("Order ID: %d, Price: %d, Type: %v\n", order.ID, order.Price, order.OrderType)
@@ -67,10 +70,4 @@ func main() {
 	queryOrders(1)
 	queryOrders(2)
 	queryOrders(3)
-}
-
-// Helper function to create a GTT time.
-func createGTT(hours int) *time.Time {
-	gtt := time.Now().Add(time.Duration(hours) * time.Hour)
-	return &gtt
 }

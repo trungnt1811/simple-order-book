@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/trungnt1811/simple-order-book/internal/logger"
-	"github.com/trungnt1811/simple-order-book/internal/module"
+	"go.uber.org/zap"
 )
 
 // Helper function to create a GTT time.
@@ -14,12 +14,11 @@ func CreateGTT(hours int) *time.Time {
 	return &gtt
 }
 
-// Helper function to create a new order book with a logger.
-func NewOrderBookWithLogger() *module.OrderBook {
+// Helper function to setup logger.
+func SetupLogger() *zap.Logger {
 	logger, err := logger.Setup()
 	if err != nil {
 		log.Fatalf("Failed to initialize zap logger: %v", err)
 	}
-	defer logger.Sync() // Flushes buffer, if any
-	return module.NewOrderBook(logger)
+	return logger
 }

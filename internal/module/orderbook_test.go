@@ -8,14 +8,17 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/trungnt1811/simple-order-book/internal/constant"
+	"github.com/trungnt1811/simple-order-book/internal/module"
 	"github.com/trungnt1811/simple-order-book/internal/util"
 )
 
 // TestSubmitOrder tests the SubmitOrder function.
 func TestOrderBook_SubmitOrder(t *testing.T) {
+	logger := util.SetupLogger()
+	defer logger.Sync() // Flushes buffer, if any
 	t.Run("Submit Buy Order", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		customerID := uint(18)
 		orderID := orderBook.NextOrderID
@@ -34,7 +37,7 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 
 	t.Run("Submit Sell Order", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		customerID := uint(11)
 		orderID := orderBook.NextOrderID
@@ -53,7 +56,7 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 
 	t.Run("Match Buy Order", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		// Prepare sell order
 		sellCustomerID := uint(1995)
@@ -86,7 +89,7 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 
 	t.Run("Match Sell Order", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		// Prepare buy order
 		buyCustomerID := uint(4953)
@@ -119,7 +122,7 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 
 	t.Run("Submit Order with Nil GTT", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		orderID := orderBook.NextOrderID
 		customerID := uint(911)
@@ -138,7 +141,7 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 
 	t.Run("Submit Multiple Orders from Same Customer", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		customerID := uint(9947)
 		orderBook.SubmitOrder(customerID, 120, constant.SellOrder, util.CreateGTT(2))
@@ -153,7 +156,7 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 
 	t.Run("Submit Order with Expired GTT", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		expiredGTT := time.Now().Add(-1 * time.Hour)
 		orderID := orderBook.NextOrderID
@@ -173,7 +176,7 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 
 	t.Run("Submit Orders from Same Customer with Same Prices but Different Timestamp", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		customerID := uint(69)
 		orderID1 := orderBook.NextOrderID
@@ -198,7 +201,7 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 
 	t.Run("Match Cancelled Order", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		// Submit and then cancel a buy order
 		buyCustomerID := uint(3456)
@@ -232,9 +235,11 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 }
 
 func TestOrderBook_CancelOrder(t *testing.T) {
+	logger := util.SetupLogger()
+	defer logger.Sync() // Flushes buffer, if any
 	t.Run("Cancel existing order", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		orderID := orderBook.NextOrderID
 
@@ -262,7 +267,7 @@ func TestOrderBook_CancelOrder(t *testing.T) {
 	})
 	t.Run("Cancel non-existent order", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		orderID := orderBook.NextOrderID
 
@@ -292,7 +297,7 @@ func TestOrderBook_CancelOrder(t *testing.T) {
 
 	t.Run("Cancel order in multi-order customer", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		// Submit initial orders
 		customerID := uint(789)
@@ -319,9 +324,11 @@ func TestOrderBook_CancelOrder(t *testing.T) {
 }
 
 func TestOrderBook_QueryOrders(t *testing.T) {
+	logger := util.SetupLogger()
+	defer logger.Sync() // Flushes buffer, if any
 	t.Run("Query Orders with Active Orders", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		customerID := uint(100)
 		orderBook.SubmitOrder(customerID, 120, constant.BuyOrder, util.CreateGTT(1))
@@ -335,7 +342,7 @@ func TestOrderBook_QueryOrders(t *testing.T) {
 
 	t.Run("Query Orders with Expired Orders", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		customerID := uint(101)
 		expiredGTT := time.Now().Add(-1 * time.Hour)
@@ -350,7 +357,7 @@ func TestOrderBook_QueryOrders(t *testing.T) {
 
 	t.Run("Query Orders with No Orders", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		customerID := uint(102)
 
@@ -362,7 +369,7 @@ func TestOrderBook_QueryOrders(t *testing.T) {
 
 	t.Run("Query Orders with Both Active and Expired Orders", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		customerID := uint(103)
 		expiredGTT := time.Now().Add(-1 * time.Hour)
@@ -379,7 +386,7 @@ func TestOrderBook_QueryOrders(t *testing.T) {
 
 	t.Run("Query Orders After Canceling an Order", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		customerID := uint(104)
 		orderID := orderBook.NextOrderID
@@ -394,7 +401,7 @@ func TestOrderBook_QueryOrders(t *testing.T) {
 
 	t.Run("Query Orders After Canceling All Orders", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		customerID := uint(105)
 		orderID1 := orderBook.NextOrderID
@@ -412,7 +419,7 @@ func TestOrderBook_QueryOrders(t *testing.T) {
 
 	t.Run("Query Orders with Cancelled Orders but Active Orders Present", func(t *testing.T) {
 		// Create a new order book
-		orderBook := util.NewOrderBookWithLogger()
+		orderBook := module.NewOrderBook(logger)
 
 		customerID := uint(106)
 		expiredGTT := time.Now().Add(-1 * time.Hour)
