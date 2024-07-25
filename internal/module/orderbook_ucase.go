@@ -9,11 +9,12 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/trungnt1811/simple-order-book/internal/constant"
+	"github.com/trungnt1811/simple-order-book/internal/interfaces"
 	"github.com/trungnt1811/simple-order-book/internal/model"
 )
 
 // OrderBook manages buy and sell orders.
-type OrderBook struct {
+type orderBook struct {
 	BuyOrders      *model.OrderHeap
 	SellOrders     *model.OrderHeap
 	Orders         map[uint64]*model.Order          // All orders by ID
@@ -24,8 +25,8 @@ type OrderBook struct {
 }
 
 // NewOrderBook creates a new OrderBook.
-func NewOrderBook(logger *zap.Logger) *OrderBook {
-	return &OrderBook{
+func NewOrderBookUCase(logger *zap.Logger) interfaces.OrderBookUCase {
+	return &orderBook{
 		BuyOrders:      &model.OrderHeap{Type: constant.BuyOrder},
 		SellOrders:     &model.OrderHeap{Type: constant.SellOrder},
 		Orders:         make(map[uint64]*model.Order),
@@ -35,7 +36,27 @@ func NewOrderBook(logger *zap.Logger) *OrderBook {
 	}
 }
 
-func (ob *OrderBook) SubmitOrder(customerID uint, price uint, orderType constant.OrderType, gtt *time.Time) error {
+func (ob *orderBook) GetNextOrderID() uint64 {
+	return ob.NextOrderID
+}
+
+func (ob *orderBook) GetSellOrders() *model.OrderHeap {
+	return ob.SellOrders
+}
+
+func (ob *orderBook) GetBuyOrders() *model.OrderHeap {
+	return ob.BuyOrders
+}
+
+func (ob *orderBook) GetOrders() map[uint64]*model.Order {
+	return ob.Orders
+}
+
+func (ob *orderBook) GetCustomerOrders() map[uint]map[uint64]*model.Order {
+	return ob.CustomerOrders
+}
+
+func (ob *orderBook) SubmitOrder(customerID uint, price uint, orderType constant.OrderType, gtt *time.Time) error {
 	ob.mtx.Lock()
 	defer ob.mtx.Unlock()
 
@@ -67,7 +88,7 @@ func (ob *OrderBook) SubmitOrder(customerID uint, price uint, orderType constant
 }
 
 // CancelOrder cancels an existing order by ID.
-func (ob *OrderBook) CancelOrder(orderID uint64) error {
+func (ob *orderBook) CancelOrder(orderID uint64) error {
 	ob.mtx.Lock()
 	defer ob.mtx.Unlock()
 
@@ -86,7 +107,7 @@ func (ob *OrderBook) CancelOrder(orderID uint64) error {
 }
 
 // QueryOrders returns all active orders for a given customer ID.
-func (ob *OrderBook) QueryOrders(customerID uint) []*model.Order {
+func (ob *orderBook) QueryOrders(customerID uint) []*model.Order {
 	ob.mtx.RLock()
 	defer ob.mtx.RUnlock()
 
@@ -106,7 +127,7 @@ func (ob *OrderBook) QueryOrders(customerID uint) []*model.Order {
 }
 
 // matchOrder attempts to match a new order with existing orders
-func (ob *OrderBook) matchOrder(order *model.Order, orderType constant.OrderType) {
+func (ob *orderBook) matchOrder(order *model.Order, orderType constant.OrderType) {
 	currentTime := time.Now()
 
 	// If the order's GTT (Good Til Time) is set and it is before the current time, the order is expired.
@@ -188,7 +209,7 @@ func (ob *OrderBook) matchOrder(order *model.Order, orderType constant.OrderType
 }
 
 // removeOrder remove an order from all relevant data structures
-func (ob *OrderBook) removeOrder(order *model.Order) {
+func (ob *orderBook) removeOrder(order *model.Order) {
 	delete(ob.Orders, order.ID)
 	if customerOrders, ok := ob.CustomerOrders[order.CustomerID]; ok {
 		delete(customerOrders, order.ID)
@@ -199,7 +220,7 @@ func (ob *OrderBook) removeOrder(order *model.Order) {
 }
 
 // reinsertSkippedOrders reinsert skipped orders back into the heap
-func (ob *OrderBook) reinsertSkippedOrders(orders *model.OrderHeap, skippedOrders []*model.Order) {
+func (ob *orderBook) reinsertSkippedOrders(orders *model.OrderHeap, skippedOrders []*model.Order) {
 	for _, skipped := range skippedOrders {
 		heap.Push(orders, skipped)
 	}

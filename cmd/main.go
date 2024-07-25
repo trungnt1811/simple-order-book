@@ -13,7 +13,7 @@ func main() {
 	logger := util.SetupLogger()
 	defer logger.Sync() // Flushes buffer, if any
 
-	orderBook := module.NewOrderBook(logger)
+	orderBook := module.NewOrderBookUCase(logger)
 
 	var wg sync.WaitGroup
 
