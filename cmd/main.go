@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"sync"
 
 	"go.uber.org/zap"
@@ -27,19 +28,6 @@ func main() {
 		}
 	}
 
-	// Function to cancel multiple orders concurrently
-	cancelOrders := func(orderIDs []uint64) {
-		defer wg.Done()
-		for _, orderID := range orderIDs {
-			err := orderBook.CancelOrder(orderID)
-			if err != nil {
-				logger.Error("Failed to cancel order", zap.Uint64("OrderID", orderID), zap.Error(err))
-			} else {
-				logger.Debug("Order canceled", zap.Uint64("OrderID", orderID))
-			}
-		}
-	}
-
 	// Start concurrent submissions
 	wg.Add(3)
 	go submitOrders(1, []uint{100, 101, 102}, constant.BuyOrder)
@@ -54,13 +42,28 @@ func main() {
 		orders := orderBook.QueryOrders(customerID)
 		logger.Debug("Queried active orders", zap.Uint("CustomerID", customerID), zap.Int("OrderCount", len(orders)))
 		for _, order := range orders {
-			logger.Debug("Order details", zap.Uint64("OrderID", order.ID), zap.Uint("Price", order.Price), zap.String("OrderType", order.OrderType.String()))
+			logger.Info("Order details", zap.Uint("CustomerID", customerID), zap.Uint64("OrderID", order.ID), zap.Uint("Price", order.Price), zap.String("OrderType", order.OrderType.String()))
 		}
 	}
 
 	queryOrders(1)
 	queryOrders(2)
 	queryOrders(3)
+
+	fmt.Println("============================================================")
+
+	// Function to cancel multiple orders concurrently
+	cancelOrders := func(orderIDs []uint64) {
+		defer wg.Done()
+		for _, orderID := range orderIDs {
+			err := orderBook.CancelOrder(orderID)
+			if err != nil {
+				logger.Error("Failed to cancel order", zap.Uint64("OrderID", orderID), zap.Error(err))
+			} else {
+				logger.Debug("Order canceled", zap.Uint64("OrderID", orderID))
+			}
+		}
+	}
 
 	// Cancel some orders concurrently
 	orderIDs := []uint64{1, 2, 3, 4, 5, 6}
