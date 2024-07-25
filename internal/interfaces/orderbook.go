@@ -12,8 +12,8 @@ type OrderBookUCase interface {
 	CancelOrder(orderID uint64) error
 	QueryOrders(customerID uint) []*model.Order
 	GetNextOrderID() uint64
-	GetSellOrders() *model.OrderHeap
-	GetBuyOrders() *model.OrderHeap
+	GetSellOrders() model.OrderHeap
+	GetBuyOrders() model.OrderHeap
 	GetOrders() map[uint64]*model.Order
 	GetCustomerOrders() map[uint]map[uint64]*model.Order
 }

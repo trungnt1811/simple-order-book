@@ -40,12 +40,12 @@ func (ob *orderBook) GetNextOrderID() uint64 {
 	return ob.NextOrderID
 }
 
-func (ob *orderBook) GetSellOrders() *model.OrderHeap {
-	return ob.SellOrders
+func (ob *orderBook) GetSellOrders() model.OrderHeap {
+	return *ob.SellOrders
 }
 
-func (ob *orderBook) GetBuyOrders() *model.OrderHeap {
-	return ob.BuyOrders
+func (ob *orderBook) GetBuyOrders() model.OrderHeap {
+	return *ob.BuyOrders
 }
 
 func (ob *orderBook) GetOrders() map[uint64]*model.Order {
