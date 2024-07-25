@@ -4,8 +4,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/trungnt1811/simple-order-book/internal/logger"
 	"go.uber.org/zap"
+
+	"github.com/trungnt1811/simple-order-book/internal/logger"
 )
 
 // Helper function to create a GTT time.
