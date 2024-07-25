@@ -186,7 +186,7 @@ func (ob *OrderBook) matchOrder(order *model.Order, orderType constant.OrderType
 	ob.CustomerOrders[order.CustomerID][order.ID] = order
 }
 
-// Helper function to remove an order from all relevant data structures
+// removeOrder remove an order from all relevant data structures
 func (ob *OrderBook) removeOrder(order *model.Order) {
 	delete(ob.Orders, order.ID)
 	if customerOrders, ok := ob.CustomerOrders[order.CustomerID]; ok {
@@ -197,7 +197,7 @@ func (ob *OrderBook) removeOrder(order *model.Order) {
 	}
 }
 
-// Helper function to reinsert skipped orders back into the heap
+// reinsertSkippedOrders reinsert skipped orders back into the heap
 func (ob *OrderBook) reinsertSkippedOrders(orders *model.OrderHeap, skippedOrders []*model.Order) {
 	for _, skipped := range skippedOrders {
 		heap.Push(orders, skipped)
