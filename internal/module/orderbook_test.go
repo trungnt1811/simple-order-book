@@ -54,7 +54,7 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		require.Equal(t, 1, len(orderBook.CustomerOrders[customerID]), "Expected 1 order for customer ID %d", customerID)
 	})
 
-	t.Run("Match Buy Order", func(t *testing.T) {
+	t.Run("Submit Buy Order with Exact Price and Match Sell Order", func(t *testing.T) {
 		// Create a new order book
 		orderBook := module.NewOrderBook(logger)
 
@@ -87,7 +87,40 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		require.Equal(t, 0, len(orderBook.CustomerOrders[buyCustomerID]), "Expected 0 order for customer ID %d", buyCustomerID)
 	})
 
-	t.Run("Match Sell Order", func(t *testing.T) {
+	t.Run("Submit Buy Order with Higher Price and Match Sell Order", func(t *testing.T) {
+		// Create a new order book
+		orderBook := module.NewOrderBook(logger)
+
+		// Prepare sell order
+		sellCustomerID := uint(1995)
+		sellOrderID := orderBook.NextOrderID
+		orderBook.SubmitOrder(sellCustomerID, 90, constant.SellOrder, util.CreateGTT(1))
+
+		// Prepare buy order should match
+		buyCustomerID := uint(4953)
+		buyOrderID := orderBook.NextOrderID
+		orderBook.SubmitOrder(buyCustomerID, 91, constant.BuyOrder, util.CreateGTT(1))
+
+		// Check if the buy order is matched and not in the heap
+		require.Equal(t, 0, orderBook.BuyOrders.Len(), "Expected 0 buy orders in the heap")
+
+		// Check if the sell order is removed from the heap
+		require.Equal(t, 0, orderBook.SellOrders.Len(), "Expected 0 sell orders in the heap")
+
+		// Check if the matched orders are removed from the Orders map
+		_, sellOrderExists := orderBook.Orders[sellOrderID]
+		require.False(t, sellOrderExists, "Order ID %d should not exist in the Orders map", sellOrderID)
+		_, buyOrderExists := orderBook.Orders[buyOrderID]
+		require.False(t, buyOrderExists, "Order ID %d should not exist in the Orders map", buyOrderID)
+
+		// Check if the sell order is removed from the CustomerOrders map
+		require.Equal(t, 0, len(orderBook.CustomerOrders[sellCustomerID]), "Expected 0 order for customer ID %d", sellCustomerID)
+
+		// Check if the buy order is not added to the CustomerOrders map
+		require.Equal(t, 0, len(orderBook.CustomerOrders[buyCustomerID]), "Expected 0 order for customer ID %d", buyCustomerID)
+	})
+
+	t.Run("Submit Sell Order with Exact Price and Match Buy Order", func(t *testing.T) {
 		// Create a new order book
 		orderBook := module.NewOrderBook(logger)
 
@@ -100,6 +133,39 @@ func TestOrderBook_SubmitOrder(t *testing.T) {
 		sellCustomerID := uint(1995)
 		sellOrderID := orderBook.NextOrderID
 		orderBook.SubmitOrder(sellCustomerID, 90, constant.SellOrder, util.CreateGTT(1))
+
+		// Check if the sell order is matched and not in the heap
+		require.Equal(t, 0, orderBook.SellOrders.Len(), "Expected 0 sell orders in the heap")
+
+		// Check if the buy order is removed from the heap
+		require.Equal(t, 0, orderBook.BuyOrders.Len(), "Expected 0 buy orders in the heap")
+
+		// Check if the matched orders are removed from the Orders map
+		_, sellOrderExists := orderBook.Orders[sellOrderID]
+		require.False(t, sellOrderExists, "Order ID %d should not exist in the Orders map", sellOrderID)
+		_, buyOrderExists := orderBook.Orders[buyOrderID]
+		require.False(t, buyOrderExists, "Order ID %d should not exist in the Orders map", buyOrderID)
+
+		// Check if the sell order is removed from the CustomerOrders map
+		require.Equal(t, 0, len(orderBook.CustomerOrders[sellCustomerID]), "Expected 0 orders for customer ID %d", sellCustomerID)
+
+		// Check if the buy order is removed from the CustomerOrders map
+		require.Equal(t, 0, len(orderBook.CustomerOrders[buyCustomerID]), "Expected 0 orders for customer ID %d", buyCustomerID)
+	})
+
+	t.Run("Submit Sell Order with Lower Price and Match Buy Order", func(t *testing.T) {
+		// Create a new order book
+		orderBook := module.NewOrderBook(logger)
+
+		// Prepare buy order
+		buyCustomerID := uint(4953)
+		buyOrderID := orderBook.NextOrderID
+		orderBook.SubmitOrder(buyCustomerID, 90, constant.BuyOrder, util.CreateGTT(1))
+
+		// Prepare sell order that should match
+		sellCustomerID := uint(1995)
+		sellOrderID := orderBook.NextOrderID
+		orderBook.SubmitOrder(sellCustomerID, 89, constant.SellOrder, util.CreateGTT(1))
 
 		// Check if the sell order is matched and not in the heap
 		require.Equal(t, 0, orderBook.SellOrders.Len(), "Expected 0 sell orders in the heap")

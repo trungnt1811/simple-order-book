@@ -151,6 +151,7 @@ func (ob *OrderBook) matchOrder(order *model.Order, orderType constant.OrderType
 				// A match is found, execute the trade
 				ob.logger.Info("Matched orders",
 					zap.Uint64("orderID", order.ID),
+					zap.Bool("orderType", bool(order.OrderType)),
 					zap.Uint64("oppositeOrderID", oppositeOrder.ID),
 					zap.Uint("price", oppositeOrder.Price),
 				)
