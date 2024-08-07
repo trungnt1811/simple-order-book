@@ -1,13 +1,17 @@
 package main
 
 import (
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	"go.uber.org/zap"
 
 	"github.com/trungnt1811/simple-order-book/internal/constant"
 	"github.com/trungnt1811/simple-order-book/internal/module"
 	"github.com/trungnt1811/simple-order-book/internal/util"
+	"github.com/trungnt1811/simple-order-book/worker"
 )
 
 func main() {
@@ -15,6 +19,10 @@ func main() {
 	defer logger.Sync() // Flushes buffer, if any
 
 	orderBook := module.NewOrderBookUCase(logger)
+
+	cleaner := worker.NewCleaner(orderBook)
+	go cleaner.RemoveExpiredBuyOrders()
+	go cleaner.RemoveExpiredSellOrders()
 
 	var wg sync.WaitGroup
 
@@ -74,4 +82,9 @@ func main() {
 	queryOrdersByCustomerID(1)
 	queryOrdersByCustomerID(2)
 	queryOrdersByCustomerID(3)
+
+	// Wait until some signal is captured.
+	sigC := make(chan os.Signal, 1)
+	signal.Notify(sigC, syscall.SIGTERM, os.Interrupt)
+	<-sigC
 }

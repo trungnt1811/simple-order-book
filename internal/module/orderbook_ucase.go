@@ -13,11 +13,10 @@ import (
 	"github.com/trungnt1811/simple-order-book/internal/model"
 )
 
-// TODO: Consider implementing a fine-grained locking mechanism and a background process for order expiration,
-// however this may require additional time to implement, I think so :D
+// TODO: Consider implementing a fine-grained locking mechanism
 
 // orderBook manages buy and sell orders.
-type orderBook struct {
+type OrderBook struct {
 	BuyOrders      *model.OrderHeap
 	SellOrders     *model.OrderHeap
 	Orders         map[uint64]*model.Order          // All orders by ID
@@ -29,7 +28,7 @@ type orderBook struct {
 
 // NewOrderBookUCase creates a new order book ucase.
 func NewOrderBookUCase(logger *zap.Logger) interfaces.OrderBookUCase {
-	return &orderBook{
+	return &OrderBook{
 		BuyOrders:      &model.OrderHeap{Type: constant.BuyOrder},
 		SellOrders:     &model.OrderHeap{Type: constant.SellOrder},
 		Orders:         make(map[uint64]*model.Order),
@@ -41,36 +40,36 @@ func NewOrderBookUCase(logger *zap.Logger) interfaces.OrderBookUCase {
 
 // GetNextOrderID returns the next available order ID.
 // This ID is incremented with each new order submission.
-func (ob *orderBook) GetNextOrderID() uint64 {
+func (ob *OrderBook) GetNextOrderID() uint64 {
 	return ob.NextOrderID
 }
 
 // GetSellOrders returns a heap of all sell orders.
 // The heap structure allows efficient retrieval of the highest priority sell orders.
-func (ob *orderBook) GetSellOrders() model.OrderHeap {
+func (ob *OrderBook) GetSellOrders() model.OrderHeap {
 	return *ob.SellOrders
 }
 
 // GetBuyOrders returns a heap of all buy orders.
 // The heap structure allows efficient retrieval of the highest priority buy orders.
-func (ob *orderBook) GetBuyOrders() model.OrderHeap {
+func (ob *OrderBook) GetBuyOrders() model.OrderHeap {
 	return *ob.BuyOrders
 }
 
 // GetOrders returns a map of all orders.
 // The map key is the order ID and the value is a pointer to the Order struct.
-func (ob *orderBook) GetOrders() map[uint64]*model.Order {
+func (ob *OrderBook) GetOrders() map[uint64]*model.Order {
 	return ob.Orders
 }
 
 // GetCustomerOrders returns a map of customer orders.
 // The outer map key is the customer ID, and the inner map key is the order ID with the value being a pointer to the Order struct.
-func (ob *orderBook) GetCustomerOrders() map[uint]map[uint64]*model.Order {
+func (ob *OrderBook) GetCustomerOrders() map[uint]map[uint64]*model.Order {
 	return ob.CustomerOrders
 }
 
 // SubmitOrder submit an order.
-func (ob *orderBook) SubmitOrder(customerID uint, price uint, orderType constant.OrderType, gtt *time.Time) error {
+func (ob *OrderBook) SubmitOrder(customerID uint, price uint, orderType constant.OrderType, gtt *time.Time) error {
 	ob.mtx.Lock()
 	defer ob.mtx.Unlock()
 
@@ -106,7 +105,7 @@ func (ob *orderBook) SubmitOrder(customerID uint, price uint, orderType constant
 }
 
 // CancelOrder cancels an existing order by ID.
-func (ob *orderBook) CancelOrder(orderID uint64) error {
+func (ob *OrderBook) CancelOrder(orderID uint64) error {
 	ob.mtx.Lock()
 	defer ob.mtx.Unlock()
 
@@ -125,7 +124,7 @@ func (ob *orderBook) CancelOrder(orderID uint64) error {
 }
 
 // QueryOrders returns all active orders for a given customer ID.
-func (ob *orderBook) QueryOrders(customerID uint) []*model.Order {
+func (ob *OrderBook) QueryOrders(customerID uint) []*model.Order {
 	ob.mtx.RLock()
 	defer ob.mtx.RUnlock()
 
@@ -145,8 +144,76 @@ func (ob *orderBook) QueryOrders(customerID uint) []*model.Order {
 	return activeOrders
 }
 
+// RemoveExpiredBuyOrders removes expired buy orders from the order book.
+// It locks the order book to ensure thread safety, checks each buy order
+// for expiration, and removes it if expired. Orders that are not expired
+// are temporarily removed and reinserted after the process.
+func (ob *OrderBook) RemoveExpiredBuyOrders() {
+	currentTime := time.Now()
+
+	// Lock the order book to ensure thread safety
+	ob.mtx.Lock()
+	defer ob.mtx.Unlock()
+
+	// Create a slice to store orders that are not expired
+	skippedOrders := []*model.Order{}
+
+	// Iterate over buy orders
+	for ob.BuyOrders.Len() > 0 {
+		// Remove the top order from the heap
+		order := heap.Pop(ob.BuyOrders).(*model.Order)
+
+		// Check if the order is expired
+		if order.GTT.Before(currentTime) {
+			// Remove expired order
+			ob.removeOrder(order)
+			continue
+		}
+
+		// Add non-expired order to the skippedOrders slice
+		skippedOrders = append(skippedOrders, order)
+	}
+
+	// Reinsert any skipped orders before exiting the function
+	ob.reinsertSkippedOrders(ob.BuyOrders, skippedOrders)
+}
+
+// RemoveExpiredSellOrders removes expired sell orders from the order book.
+// It locks the order book to ensure thread safety, checks each sell order
+// for expiration, and removes it if expired. Orders that are not expired
+// are temporarily removed and reinserted after the process.
+func (ob *OrderBook) RemoveExpiredSellOrders() {
+	currentTime := time.Now()
+
+	// Lock the order book to ensure thread safety
+	ob.mtx.Lock()
+	defer ob.mtx.Unlock()
+
+	// Create a slice to store orders that are not expired
+	skippedOrders := []*model.Order{}
+
+	// Iterate over sell orders
+	for ob.SellOrders.Len() > 0 {
+		// Remove the top order from the heap
+		order := heap.Pop(ob.SellOrders).(*model.Order)
+
+		// Check if the order is expired
+		if order.GTT.Before(currentTime) {
+			// Remove expired order
+			ob.removeOrder(order)
+			continue
+		}
+
+		// Add non-expired order to the skippedOrders slice
+		skippedOrders = append(skippedOrders, order)
+	}
+
+	// Reinsert any skipped orders before exiting the function
+	ob.reinsertSkippedOrders(ob.SellOrders, skippedOrders)
+}
+
 // matchOrder attempts to match a new order with existing orders
-func (ob *orderBook) matchOrder(order *model.Order, orderType constant.OrderType) {
+func (ob *OrderBook) matchOrder(order *model.Order, orderType constant.OrderType) {
 	currentTime := time.Now()
 
 	// If the order's GTT (Good Til Time) is set and it is before the current time, the order is expired.
@@ -229,7 +296,7 @@ func (ob *orderBook) matchOrder(order *model.Order, orderType constant.OrderType
 }
 
 // removeOrder remove an order from all relevant data structures
-func (ob *orderBook) removeOrder(order *model.Order) {
+func (ob *OrderBook) removeOrder(order *model.Order) {
 	delete(ob.Orders, order.ID)
 	if customerOrders, ok := ob.CustomerOrders[order.CustomerID]; ok {
 		delete(customerOrders, order.ID)
@@ -240,7 +307,7 @@ func (ob *orderBook) removeOrder(order *model.Order) {
 }
 
 // reinsertSkippedOrders reinsert skipped orders back into the heap
-func (ob *orderBook) reinsertSkippedOrders(orders *model.OrderHeap, skippedOrders []*model.Order) {
+func (ob *OrderBook) reinsertSkippedOrders(orders *model.OrderHeap, skippedOrders []*model.Order) {
 	for _, skipped := range skippedOrders {
 		heap.Push(orders, skipped)
 	}

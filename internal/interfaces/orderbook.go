@@ -11,6 +11,8 @@ type OrderBookUCase interface {
 	SubmitOrder(customerID uint, price uint, orderType constant.OrderType, gtt *time.Time) error
 	CancelOrder(orderID uint64) error
 	QueryOrders(customerID uint) []*model.Order
+	RemoveExpiredBuyOrders()
+	RemoveExpiredSellOrders()
 	GetNextOrderID() uint64
 	GetSellOrders() model.OrderHeap
 	GetBuyOrders() model.OrderHeap
